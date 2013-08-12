@@ -1,4 +1,4 @@
-PyBrain -- the Python Machine Learning Library
+PyBrain - The Python Machine Learning Library
 ===============================================
 
 FORK NOTES
@@ -15,8 +15,8 @@ Quick answer: make sure you have SciPy installed, then run
 	
 Longer answer: (if the above was any trouble) we keep more
 detailed installation instructions (including those
-for the dependencies) up-to-date in a wiki at:
-```http://wiki.github.com/pybrain/pybrain/installation```
+for the dependencies) up-to-date in the [Wiki]
+(http://wiki.github.com/pybrain/pybrain/installation).
 
 
 DOCUMENTATION
