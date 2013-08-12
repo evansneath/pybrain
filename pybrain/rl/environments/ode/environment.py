@@ -26,7 +26,7 @@ class ODEEnvironment(Environment):
     # define a verbosity level for selective debug output (0=none)
     verbosity = 0
 
-    def __init__(self, render=True, realtime=True, ip="127.0.0.1", port="21590", buf='16384'):
+    def __init__(self, render=True, realtime=True, ip="127.0.0.1", port="21590", buf='16384', gravity=-9.81):
         """ initializes the virtual world, variables, the frame rate and the callback functions."""
         print "ODEEnvironment -- based on Open Dynamics Engine."
 
@@ -58,6 +58,7 @@ class ODEEnvironment(Environment):
         self.FricMu = 8.0
         self.stepsPerAction = 1
         self.stepCounter = 0
+        self.g = gravity
 
     def closeSocket(self):
         self.server.UDPInSock.close()
@@ -80,11 +81,10 @@ class ODEEnvironment(Environment):
         """set the world's gravity constant in negative y-direction"""
         self.world.setGravity((0, -g, 0))
 
-
     def _setWorldParameters(self):
         """ sets parameters for ODE world object: gravity, error correction (ERP, default=0.2),
         constraint force mixing (CFM, default=1e-5).  """
-        self.world.setGravity((0, -9.81, 0))
+        self.world.setGravity((0, self.g, 0))
         # self.world.setERP(0.2)
         # self.world.setCFM(1e-9)
 
@@ -490,7 +490,7 @@ class ODEEnvironment(Environment):
         if self.server.clients > 0:
             # If there are clients send them the new data
             self.server.send(message)
-        time.sleep(0.02)
+
         self.updateLock.release()
         self.updateDone = True
 

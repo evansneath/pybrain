@@ -2,7 +2,7 @@ __author__ = 'Thomas Rueckstiess, ruecksti@in.tum.de'
 
 import sys
 
-class XMLstruct:
+class XMLstruct(object):
     """
     Defines an XML tag structure. Tags are added at the current level
     using the insert() method, with up() providing a way to get to the
