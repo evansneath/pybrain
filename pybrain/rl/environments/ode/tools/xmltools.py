@@ -16,6 +16,8 @@ class XMLstruct(object):
     def __init__(self, name, attr=None):
         """create a new tag at the topmost level using given name
         and (optional) attribute dictionary"""
+        super(XMLstruct, self).__init__()
+
         # XML tag structure is a dictionary containing all attributes plus
         # two special tags:
         #   myName = name of the tag

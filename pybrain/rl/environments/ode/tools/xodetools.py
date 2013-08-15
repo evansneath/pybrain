@@ -19,6 +19,8 @@ class XODEfile(XMLstruct):
     def __init__(self, name, **kwargs):
         """initialize the XODE structure with a name and the world and
         space tags"""
+        super(XODEfile, self).__init__(name, **kwargs)
+
         self._xodename = name
         self._centerOn = None
         self._affixToEnvironment = None

@@ -28,7 +28,8 @@ class ODEEnvironment(Environment):
 
     def __init__(self, render=True, realtime=True, ip="127.0.0.1", port="21590", buf='16384', gravity=-9.81):
         """ initializes the virtual world, variables, the frame rate and the callback functions."""
-        print "ODEEnvironment -- based on Open Dynamics Engine."
+        if self.verbosity > 0:
+            print "ODEEnvironment -- based on Open Dynamics Engine."
 
         # initialize base class
         self.render = render
