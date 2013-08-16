@@ -14,7 +14,9 @@ from pybrain.tools.networking.udpconnection import UDPClient
 
 
 class ODEViewer(object):
-    def __init__(self, servIP="127.0.0.1", ownIP="127.0.0.1", port="21590", buf="16384"):
+    def __init__(self, servIP='127.0.0.1', ownIP='127.0.0.1', port='21590',
+            buf='16384', verbose=False):
+        self.verbose = verbose
 
         # initialize the viewport size
         self.width = 800
@@ -58,7 +60,7 @@ class ODEViewer(object):
         self.starttime = self.lasttime
 
         # initialize udp client
-        self.client = UDPClient(servIP, ownIP, port, buf)
+        self.client = UDPClient(servIP, ownIP, port, buf, verbose=self.verbose)
 
 
     def start(self):
@@ -66,21 +68,27 @@ class ODEViewer(object):
         while True:
             glutMainLoop()
 
+
     def setFrameRate(self, fps):
         self.fps = fps
         self.dt = 1.0 / self.fps
 
+
     def setCaptureScreen(self, capture):
         self.captureScreen = capture
+
 
     def getCaptureScreen(self):
         return self.captureScreen
 
+
     def waitScreenCapturing(self):
         self.isCapturing = True
 
+
     def isScreenCapturing(self):
         return self.isCapturing
+
 
     def setCenterObj(self, obj):
         self.centerObj = obj
@@ -129,6 +137,7 @@ class ODEViewer(object):
 
         glEnable(GL_NORMALIZE)
 
+
     def prepare_GL(self):
         """Prepare drawing. This function is called in every step. It clears the screen and sets the new camera position"""
         # Clear the screen
@@ -153,6 +162,7 @@ class ODEViewer(object):
         eyeY = self.viewDistance * self.lasty + centerY
         eyeZ = self.viewDistance * self.lastz
         gluLookAt (eyeX, eyeY, eyeZ, centerX, centerY, centerZ, 0, 1, 0)
+
 
     def draw_item(self, item):
         """ draws an object (spere, cube, plane, ...) """
@@ -240,6 +250,7 @@ class ODEViewer(object):
 
         glPopMatrix()
 
+
     @staticmethod
     def _loadTexture(textureFile):
         image = open(textureFile)
@@ -276,7 +287,6 @@ class ODEViewer(object):
         return textures
 
 
-
     def _drawfunc (self):
         """ draw callback function """
         # Draw the scene
@@ -290,13 +300,15 @@ class ODEViewer(object):
         if self.captureScreen:
             self._screenshot()
 
+
     def _idlefunc(self):
         self.updateData()
         t = self.dt - (time.time() - self.lasttime)
         if (t > 0):
             time.sleep(t)
         self.lasttime = time.time()
-        glutPostRedisplay ()
+        glutPostRedisplay()
+
 
     def _keyfunc (self, c, x, y):
         """ keyboard call-back function. """
@@ -308,12 +320,14 @@ class ODEViewer(object):
         if c == 'v':
             self.mouseView = not self.mouseView
 
+
     def _motionfunc(self, x, z):
         """Control the zoom factor"""
         if not self.mouseView: return
         zn = 2.75 * float(z) / self.height + 0.25   # [0.25,3]
         self.viewDistance = 3.0 * zn * zn
         self._passivemotionfunc(x, z)
+
 
     def _passivemotionfunc(self, x, z):
         """ Store the mouse coordinates (relative to center and normalized)
@@ -336,6 +350,7 @@ class ODEViewer(object):
         self.lasty = y1
         self.lastx = x1
         self.lastz = z1
+
 
     def _screenshot(self, path_prefix='.', format='PNG'):
         """Saves a screenshot of the current frame buffer.
@@ -371,4 +386,3 @@ if __name__ == '__main__':
     s = sys.argv[1:]
     odeview = ODEViewer(*s)
     odeview.start()
-

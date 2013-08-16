@@ -21,7 +21,9 @@ import socket
 
 # The server class
 class UDPServer(object):
-    def __init__(self, ip="127.0.0.1", port="21560", buf="1024"):
+    def __init__(self, ip='127.0.0.1', port='21560', buf='1024', verbose=False):
+        self.verbose = verbose
+
         #Socket settings
         self.host = ip
         self.inPort = eval(port) + 1
@@ -38,15 +40,24 @@ class UDPServer(object):
         self.cIP = []
         self.addrList = []
         self.UDPOutSockList = []
-        print "listening on port", self.inPort
+        if self.verbose:
+            print 'UDP server listening on port %d' % (self.inPort)
+
+        return
 
     # Adding a client to the list
     def addClient(self, cIP):
         self.cIP.append(cIP)
         self.addrList.append((cIP, self.outPort))
-        self.UDPOutSockList.append(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
-        print "client", cIP, "connected"
+        self.UDPOutSockList.append(socket.socket(socket.AF_INET,
+                socket.SOCK_DGRAM))
         self.clients += 1
+
+        if self.verbose:
+            print 'UDP client connected at %s' % (cIP)
+
+        return
+
 
     # Listen for clients
     def listen(self):
@@ -71,12 +82,18 @@ class UDPServer(object):
                 if newClient:
                     self.addClient(cIP)
             except:
-                print "All clients disconnected"
+                if self.verbose:
+                    print 'All UDP clients disconnected'
+
                 self.clients = 0
                 self.cIP = []
                 self.addrList = []
                 self.UDPOutSockList = []
-                print "listening on port", self.inPort
+
+                if self.verbose:
+                    print 'UPD server listening on port %d' % (self.inPort)
+
+        return
 
 
     # Sending the actual data too all clients
@@ -87,9 +104,13 @@ class UDPServer(object):
             i.sendto(sendString, self.addrList[count])
             count += 1
 
+
 # The client class
 class UDPClient(object):
-    def __init__(self, servIP="127.0.0.1", ownIP="127.0.0.1", port="21560", buf="1024"):
+    def __init__(self, servIP='127.0.0.1', ownIP='127.0.0.1', port="21560",
+            buf='1024', verbose=False):
+        self.verbose = verbose
+
         #UDP Sttings
         self.host = servIP
         self.inPort = eval(port)
@@ -102,12 +123,22 @@ class UDPClient(object):
         # Create sockets
         self.createSockets()
 
+        self.listen_attempts = 0
+        self.timeout = 0.5 # [s]
+
+        return
+
+
     # Listen for data from server
     def listen(self, arrayList=None):
         # Send alive signal (own IP adress)
         self.UDPOutSock.sendto(self.ownIP, self.outAddr)
-        # if there is no data from Server for 10 seconds server is propably down
-        self.UDPInSock.settimeout(10)
+
+        # if there is no data from Server for 10 seconds server is down
+        self.UDPInSock.settimeout(self.timeout)
+
+        self.listen_attempts += 1
+
         try:
             data = self.UDPInSock.recv(self.buf)
 
@@ -115,14 +146,18 @@ class UDPClient(object):
                 arrayList = eval(data)
                 return arrayList
             except:
-                print "Unsupported data format received from", self.outAddr, "!"
+                if self.verbose:
+                    print ('Unsupported data format received from UDP server at %s'
+                        % (self.outAddr))
                 return None
 
         except:
-            print "Server has quit!"
+            # Display this message
+            if self.verbose and (self.listen_attempts * self.timeout) % 10 == 0:
+                print 'No connection to UDP server'
+
             return None
-            # Try to recreate sockets
-            #self.createSockets()
+
 
     # Creating the sockets
     def createSockets(self):
