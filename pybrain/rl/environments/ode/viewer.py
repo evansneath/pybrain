@@ -302,11 +302,17 @@ class ODEViewer(object):
 
 
     def _idlefunc(self):
+        # Get the very latest data
         self.updateData()
-        t = self.dt - (time.time() - self.lasttime)
-        if (t > 0):
-            time.sleep(t)
-        self.lasttime = time.time()
+
+        # NOTE: This should be uncommented if real-time contraints are not
+        # handled in the main loop of your application
+        #t = self.dt - (time.time() - self.lasttime)
+        #if (t > 0 and self.):
+            #time.sleep(t)
+        #self.lasttime = time.time()
+
+        # Display the latest data directly after receiving
         glutPostRedisplay()
 
 
