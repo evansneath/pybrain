@@ -15,12 +15,20 @@ from pybrain.tools.networking.udpconnection import UDPClient
 
 class ODEViewer(object):
     def __init__(self, servIP='127.0.0.1', ownIP='127.0.0.1', port='21590',
-            buf='16384', verbose=False):
+            buf='16384', verbose=False, window_name='ODE Viewer'):
+        """Initialize
+
+        Initializes all viewer attributes and starts the OpenGL engine.
+        The UDP server is also started.
+        """
         self.verbose = verbose
+        self.window_name = window_name
 
         # initialize the viewport size
-        self.width = 800
-        self.height = 600
+        self.width = 1280
+        self.height = 1024
+
+        self.aspect_ratio = self.width / self.height
 
         # initialize object which the camera follows
         self.mouseView = True
@@ -90,17 +98,15 @@ class ODEViewer(object):
         return
 
 
-    def init_gl(self, width=800, height=600):
+    def init_gl(self):
         """ initialize OpenGL. This function has to be called only once before drawing. """
         glutInit([])
 
         # Open a window
-        glutInitDisplayMode (GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
-        self.width = width
-        self.height = height
-        glutInitWindowPosition (500, 0)
-        glutInitWindowSize (self.width, self.height)
-        self._myWindow = glutCreateWindow ("ODE Viewer")
+        glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
+        glutInitWindowPosition(500, 0)
+        glutInitWindowSize(self.width, self.height)
+        glutCreateWindow(self.window_name)
 
         # Initialize Viewport and Shading
         glViewport(0, 0, self.width, self.height)
@@ -136,7 +142,7 @@ class ODEViewer(object):
         # Projection mode
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
-        gluPerspective (45, 1.3333, 0.2, 500)
+        gluPerspective(45, self.aspect_ratio, 0.1, 50.0)
 
         # Initialize ModelView matrix
         glMatrixMode(GL_MODELVIEW)
@@ -149,9 +155,9 @@ class ODEViewer(object):
             centerX = centerY = centerZ = 0
 
         # Convert spherical to cartesian coordinates
-        cam_z = self.cam_r * sin(self.cam_theta) * cos(self.cam_phi)
         cam_x = self.cam_r * sin(self.cam_theta) * sin(self.cam_phi)
         cam_y = self.cam_r * cos(self.cam_theta)
+        cam_z = self.cam_r * sin(self.cam_theta) * cos(self.cam_phi)
 
         # Place the camera and set the camera's target object
         gluLookAt(cam_x, cam_y, cam_z, centerX, centerY, centerZ, 0, 1, 0)
@@ -180,7 +186,7 @@ class ODEViewer(object):
             rot = [R[0], R[3], R[6], 0.0,
                    R[1], R[4], R[7], 0.0,
                    R[2], R[5], R[8], 0.0,
-                      x, y, z, 1.0]
+                      x,    y,    z, 1.0]
 
             glMultMatrixd(rot)
 
