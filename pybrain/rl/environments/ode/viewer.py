@@ -4,7 +4,7 @@ from OpenGL.GL import * #@UnusedWildImport
 from OpenGL.GLU import * #@UnusedWildImport
 from OpenGL.GLUT import * #@UnusedWildImport
 
-from math import acos, pi, sqrt
+from math import sin, asin, cos, acos, pi, sqrt
 from tools.mathhelpers import crossproduct, norm, dotproduct
 
 import time
@@ -23,17 +23,31 @@ class ODEViewer(object):
         self.height = 600
 
         # initialize object which the camera follows
-        self.centerObj = None
         self.mouseView = True
-        self.viewDistance = 30
-        self.lastx = -0.5
-        self.lasty = 1
-        self.lastz = -1
 
-        self.dt = 1
-        self.fps = 50
+        # Toggles to determine if the view should zoom or rotate
+        self.motion_rotate_mode = False
+        self.motion_zoom_mode = False
+
+        # Stores the location of the mouse the last time it was clicked
+        self.motion_last_mouse_down_pos = [0.0, 0.0]
+
+        self.centerObj = None
+
+        self.cam_r_init = 1.0
+        self.cam_theta_init = pi / 4.0
+        self.cam_phi_init = 0.0
+
+        self.cam_r = self.cam_r_init
+        self.cam_theta = self.cam_theta_init
+        self.cam_phi = self.cam_phi_init
+
+        self.fps = 60
+        self.dt = 1.0 / self.fps
+
         self.lasttime = time.time()
         self.starttime = time.time()
+
         self.captureScreen = False
         self.isCapturing = False
         self.isFloorGreen = True
@@ -47,20 +61,18 @@ class ODEViewer(object):
 
         self.init_GL()
 
-        # set own callback functions
-        glutMotionFunc (self._motionfunc)
-        glutPassiveMotionFunc(self._passivemotionfunc)
-        glutDisplayFunc (self._drawfunc)
-        glutIdleFunc (self._idlefunc)
-        glutKeyboardFunc (self._keyfunc)
-
-
-        self.dt = 1.0 / self.fps
-        self.lasttime = time.time()
-        self.starttime = self.lasttime
+        # set OpenGL callback functions
+        glutKeyboardFunc(self._keyboard_callback)
+        glutMouseFunc(self._mouse_callback)
+        glutMotionFunc(self._motion_callback)
+        glutPassiveMotionFunc(self._passive_motion_callback)
+        glutDisplayFunc(self._display_callback)
+        glutIdleFunc(self._idle_callback)
 
         # initialize udp client
         self.client = UDPClient(servIP, ownIP, port, buf, verbose=self.verbose)
+
+        return
 
 
     def start(self):
@@ -68,14 +80,18 @@ class ODEViewer(object):
         while True:
             glutMainLoop()
 
+        return
+
 
     def setFrameRate(self, fps):
         self.fps = fps
         self.dt = 1.0 / self.fps
+        return
 
 
     def setCaptureScreen(self, capture):
         self.captureScreen = capture
+        return
 
 
     def getCaptureScreen(self):
@@ -84,6 +100,7 @@ class ODEViewer(object):
 
     def waitScreenCapturing(self):
         self.isCapturing = True
+        return
 
 
     def isScreenCapturing(self):
@@ -92,6 +109,7 @@ class ODEViewer(object):
 
     def setCenterObj(self, obj):
         self.centerObj = obj
+        return
 
 
     def updateData(self):
@@ -157,11 +175,16 @@ class ODEViewer(object):
             (centerX, centerY, centerZ) = self.centerObj.getPosition()
         else:
             centerX = centerY = centerZ = 0
-        # use the mouse to shift eye sensor on a hemisphere
-        eyeX = self.viewDistance * self.lastx
-        eyeY = self.viewDistance * self.lasty + centerY
-        eyeZ = self.viewDistance * self.lastz
-        gluLookAt (eyeX, eyeY, eyeZ, centerX, centerY, centerZ, 0, 1, 0)
+
+        # Convert spherical to cartesian coordinates
+        cam_z = self.cam_r * sin(self.cam_theta) * cos(self.cam_phi)
+        cam_x = self.cam_r * sin(self.cam_theta) * sin(self.cam_phi)
+        cam_y = self.cam_r * cos(self.cam_theta)
+
+        # Place the camera and set the camera's target object
+        gluLookAt(cam_x, cam_y, cam_z, centerX, centerY, centerZ, 0, 1, 0)
+
+        return
 
 
     def draw_item(self, item):
@@ -173,8 +196,8 @@ class ODEViewer(object):
         if item['type'] in ['GeomBox', 'GeomSphere', 'GeomCylinder', 'GeomCCylinder']:
             # set color of object (currently dark gray)
             if item.has_key('color'):
-                glEnable (GL_BLEND)
-                glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+                glEnable(GL_BLEND)
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
                 glColor4f(*(item['color']))
             else: glColor3f(0.1, 0.1, 0.1)
 
@@ -249,6 +272,7 @@ class ODEViewer(object):
             glPopMatrix()
 
         glPopMatrix()
+        return
 
 
     @staticmethod
@@ -287,7 +311,7 @@ class ODEViewer(object):
         return textures
 
 
-    def _drawfunc (self):
+    def _display_callback (self):
         """ draw callback function """
         # Draw the scene
         self.prepare_GL()
@@ -297,11 +321,14 @@ class ODEViewer(object):
                 self.draw_item(item)
 
         glutSwapBuffers()
+
         if self.captureScreen:
             self._screenshot()
 
+        return
 
-    def _idlefunc(self):
+
+    def _idle_callback(self):
         # Get the very latest data
         self.updateData()
 
@@ -315,47 +342,74 @@ class ODEViewer(object):
         # Display the latest data directly after receiving
         glutPostRedisplay()
 
+        return
 
-    def _keyfunc (self, c, x, y):
+
+    def _keyboard_callback(self, key, x, y):
         """ keyboard call-back function. """
-        if c == 's':
+        if key == 's':
             self.setCaptureScreen(not self.getCaptureScreen())
             print "Screen Capture: " + (self.getCaptureScreen() and "on" or "off")
-        if c in ['x', 'q']:
+        elif key in ['x', 'q']:
             sys.exit()
-        if c == 'v':
-            self.mouseView = not self.mouseView
+        elif key == 'c':
+            print 'Reset Camera'
+            self.cam_r = self.cam_r_init
+            self.cam_theta = self.cam_theta_init
+            self.cam_phi = self.cam_phi_init
+
+        return
 
 
-    def _motionfunc(self, x, z):
-        """Control the zoom factor"""
-        if not self.mouseView: return
-        zn = 2.75 * float(z) / self.height + 0.25   # [0.25,3]
-        self.viewDistance = 3.0 * zn * zn
-        self._passivemotionfunc(x, z)
+    def _mouse_callback(self, button, state, x, y):
+        if state == GLUT_DOWN:
+            self.motion_last_mouse_down_pos = (x, y)
+
+        if button == GLUT_LEFT_BUTTON:
+            # If the left button is down, activate rotation mode
+            if state == GLUT_DOWN:
+                self.motion_rotate_mode = True
+            elif state == GLUT_UP:
+                self.motion_rotate_mode = False
+        elif button == GLUT_RIGHT_BUTTON:
+            # If the right button is down, activate zoom mode
+            if state == GLUT_DOWN:
+                self.motion_zoom_mode = True
+            elif state == GLUT_UP:
+                self.motion_zoom_mode = False
+
+        return
+
+    def _motion_callback(self, x, y):
+        x_down, y_down = self.motion_last_mouse_down_pos
+
+        # Note that if a mouse has two buttons (left/right) pressed at the
+        # same time, rotate mode will always override zoom mode
+        if self.motion_rotate_mode:
+            # Modify the polar and azimuthal angles via y, x mouse direction
+            d_phi = 0.2 * (float(x) - float(x_down)) / self.height
+            d_theta = 0.2 * (float(y) - float(y_down)) / self.width
+
+            # Set camera angle constraints
+            if 0.0 <= self.cam_theta + d_theta <= pi / 2.0:
+                self.cam_theta += d_theta
+
+            if -pi / 2.0 <= self.cam_phi + d_phi <= pi / 2.0:
+                self.cam_phi += d_phi
+        elif self.motion_zoom_mode:
+            # Change radius from target based on the relative 'y' position of
+            # the mouse from the last click
+            dr = 0.2 * (float(y) - float(y_down)) / self.height
+
+            # Limit the zoom range between 0.2 and 10 meters
+            if 0.2 < self.cam_r + dr < 10:
+                self.cam_r += dr
+
+        return
 
 
-    def _passivemotionfunc(self, x, z):
-        """ Store the mouse coordinates (relative to center and normalized)
-         the eye does not exactly move on a unit hemisphere; we fudge the projection
-         a little by shifting the hemisphere into the ground by 0.1 units,
-         such that approaching the perimeter dows not cause a huge change in the
-         viewing direction. The limit for l is thus cos(arcsin(0.1))."""
-        if not self.mouseView: return
-        x1 = 3 * float(x) / self.width - 1.5
-        z1 = -3 * float(z) / self.height + 1.5
-        lsq = x1 * x1 + z1 * z1
-        l = sqrt(lsq)
-        if l > 0.994987:
-            # for mouse outside window, project onto the unit circle
-            x1 = x1 / l
-            z1 = z1 / l
-            y1 = 0
-        else:
-            y1 = max(0.0, sqrt(1.0 - x1 * x1 - z1 * z1) - 0.1)
-        self.lasty = y1
-        self.lastx = x1
-        self.lastz = z1
+    def _passive_motion_callback(self, x, z):
+        pass
 
 
     def _screenshot(self, path_prefix='.', format='PNG'):
