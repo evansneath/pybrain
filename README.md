@@ -1,14 +1,13 @@
 PyBrain - The Python Machine Learning Library
 ===============================================
 
-FORK NOTES
+Fork Notes
 ----------
 This repository has been forked for the purpose of bug fixing and
 customization during the use of PyBrain for robotic neural network
 research.
 
-
-INSTALLATION
+Installation
 ------------
 Quick answer: make sure you have SciPy installed, then run
 ```python setup.py install```
@@ -18,8 +17,7 @@ detailed installation instructions (including those
 for the dependencies) up-to-date in the [Wiki]
 (http://wiki.github.com/pybrain/pybrain/installation).
 
-
-DOCUMENTATION
+Documentation
 -------------
 Please read ```docs/documentation.pdf``` or browse ```docs/html/*```
 featuring: quickstart, tutorials, API, etc.
