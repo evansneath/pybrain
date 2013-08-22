@@ -48,18 +48,15 @@ class ODEViewer(object):
         self.lasttime = time.time()
         self.starttime = time.time()
 
-        self.captureScreen = False
-        self.isCapturing = False
-        self.isFloorGreen = True
+        self.capture_screen = False
 
         self.message = None
-        self.keyboardCallback = None
 
         # capture only every frameT. frame
         self.counter = 0
         self.frameT = 1
 
-        self.init_GL()
+        self.init_gl()
 
         # set OpenGL callback functions
         glutKeyboardFunc(self._keyboard_callback)
@@ -77,49 +74,23 @@ class ODEViewer(object):
 
     def start(self):
         # start the OpenGL main loop
-        while True:
-            glutMainLoop()
-
+        glutMainLoop()
         return
 
 
-    def setFrameRate(self, fps):
+    def set_dt(self, dt):
+        self.dt = dt
+        self.fps = 1.0 / self.dt
+        return
+
+
+    def set_fps(self, fps):
         self.fps = fps
         self.dt = 1.0 / self.fps
         return
 
 
-    def setCaptureScreen(self, capture):
-        self.captureScreen = capture
-        return
-
-
-    def getCaptureScreen(self):
-        return self.captureScreen
-
-
-    def waitScreenCapturing(self):
-        self.isCapturing = True
-        return
-
-
-    def isScreenCapturing(self):
-        return self.isCapturing
-
-
-    def setCenterObj(self, obj):
-        self.centerObj = obj
-        return
-
-
-    def updateData(self):
-        try:
-            self.message = self.client.listen()
-        except:
-            pass
-
-
-    def init_GL(self, width=800, height=600):
+    def init_gl(self, width=800, height=600):
         """ initialize OpenGL. This function has to be called only once before drawing. """
         glutInit([])
 
@@ -154,6 +125,7 @@ class ODEViewer(object):
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
 
         glEnable(GL_NORMALIZE)
+        return
 
 
     def prepare_GL(self):
@@ -246,10 +218,7 @@ class ODEViewer(object):
 
         elif item['type'] == 'GeomPlane':
             # set color of plane (currently green)
-            if self.isFloorGreen:
-                glColor3f(0.2, 0.6, 0.3)
-            else:
-                glColor3f(0.2, 0.3, 0.8)
+            glColor3f(0.2, 0.6, 0.3)
 
             # for planes, we need a Quadric object
             quad = gluNewQuadric()
@@ -322,7 +291,7 @@ class ODEViewer(object):
 
         glutSwapBuffers()
 
-        if self.captureScreen:
+        if self.capture_screen:
             self._screenshot()
 
         return
@@ -330,26 +299,28 @@ class ODEViewer(object):
 
     def _idle_callback(self):
         # Get the very latest data
-        self.updateData()
+        try:
+            self.message = self.client.listen()
+        except:
+            pass
 
         # NOTE: This should be uncommented if real-time contraints are not
         # handled in the main loop of your application
         #t = self.dt - (time.time() - self.lasttime)
-        #if (t > 0 and self.):
-            #time.sleep(t)
+        #if (t > 0):
+        #    time.sleep(t)
         #self.lasttime = time.time()
 
         # Display the latest data directly after receiving
         glutPostRedisplay()
-
         return
 
 
     def _keyboard_callback(self, key, x, y):
         """ keyboard call-back function. """
         if key == 's':
-            self.setCaptureScreen(not self.getCaptureScreen())
-            print "Screen Capture: " + (self.getCaptureScreen() and "on" or "off")
+            self.capture_screen = not self.capture_screen
+            print "Screen Capture: " + (self.self.capture_screen and "on" or "off")
         elif key in ['x', 'q']:
             sys.exit()
         elif key == 'c':
@@ -439,7 +410,7 @@ class ODEViewer(object):
         else:
             self.counter += 1
 
-        self.isCapturing = False
+        return
 
 
 if __name__ == '__main__':
