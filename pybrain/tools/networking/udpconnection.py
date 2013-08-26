@@ -17,11 +17,12 @@ __author__ = 'Frank Sehnke, sehnke@in.tum.de'
 #                                                                                                           #
 #############################################################################################################
 
+import math
 import socket
 
 # The server class
 class UDPServer(object):
-    def __init__(self, ip='127.0.0.1', port='21560', buf='1024', verbose=False):
+    def __init__(self, ip='127.0.0.1', port='21560', buf='16384', verbose=False):
         self.verbose = verbose
 
         #Socket settings
@@ -98,17 +99,39 @@ class UDPServer(object):
 
     # Sending the actual data too all clients
     def send(self, arrayList):
-        sendString = repr(arrayList)
-        count = 0
-        for i in self.UDPOutSockList:
-            i.sendto(sendString, self.addrList[count])
-            count += 1
+        data = repr(arrayList)
+        data_len = len(data)
+
+        # Message format:
+        # [<more_data_flag (1 byte)>, <application_data (x bytes)>]
+
+        for i, sock in enumerate(self.UDPOutSockList):
+            # Get the max socket packet size
+            max_size = sock.getsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF)
+
+            # Calculate the number of packets necessary for the data size
+            num_packets = int(math.ceil(float(data_len)/(float(max_size)-1)))
+
+            for msg_num in range(num_packets):
+                # This single byte value prepends each message. The client
+                # looks for this when deciding whether there is more data
+                # that was sent
+                more_data = 1 if msg_num < num_packets - 1 else 0
+
+                # Parse the data to send in this packet
+                cur_pos = msg_num * (max_size - 1)
+                packet = repr(more_data) + data[cur_pos:cur_pos+max_size-1]
+
+                # Ship it off!
+                sock.sendto(packet, self.addrList[i])
+
+        return
 
 
 # The client class
 class UDPClient(object):
     def __init__(self, servIP='127.0.0.1', ownIP='127.0.0.1', port="21560",
-            buf='1024', verbose=False):
+            buf='16384', verbose=False):
         self.verbose = verbose
 
         #UDP Sttings
@@ -140,7 +163,24 @@ class UDPClient(object):
         self.listen_attempts += 1
 
         try:
-            data = self.UDPInSock.recv(self.buf)
+            data = ''
+
+            # Get all data associated with packets sent over. Each packet has
+            # the following format:
+            # [<more_data_flag (1 byte)>, <application_data (x bytes)>]
+
+            # If the more_data_flag is set, this means that the application
+            # data was sent in more than one packet and must be reconstructed
+            while True:
+                # Receive data over UDP socket connection
+                packet = self.UDPInSock.recv(self.buf)
+
+                # Extract all application data
+                data += packet[1:]
+
+                # There are no more packets associated with this data blob
+                if not int(packet[0]):
+                    break
 
             try:
                 arrayList = eval(data)
@@ -166,3 +206,4 @@ class UDPClient(object):
         self.UDPInSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.UDPInSock.bind(self.inAddr)
 
+        return
