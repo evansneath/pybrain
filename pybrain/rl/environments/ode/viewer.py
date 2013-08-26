@@ -28,7 +28,10 @@ class ODEViewer(object):
         self.width = 1280
         self.height = 1024
 
-        self.aspect_ratio = self.width / self.height
+        # Determine if fullscreen is active or not
+        self.is_fullscreen = False
+
+        self.aspect_ratio = float(self.width) / float(self.height)
 
         # initialize object which the camera follows
         self.mouseView = True
@@ -104,7 +107,7 @@ class ODEViewer(object):
 
         # Open a window
         glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
-        glutInitWindowPosition(500, 0)
+        glutInitWindowPosition(0, 0)
         glutInitWindowSize(self.width, self.height)
         glutCreateWindow(self.window_name)
 
@@ -134,10 +137,14 @@ class ODEViewer(object):
         return
 
 
-    def prepare_GL(self):
+    def prepare_gl(self):
         """Prepare drawing. This function is called in every step. It clears the screen and sets the new camera position"""
         # Clear the screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        # Calculate the current aspect ratio so we have an accurate model
+        (_, _, x, y) = glGetIntegerv(GL_VIEWPORT)
+        self.aspect_ratio = float(x) / float(y)
 
         # Projection mode
         glMatrixMode(GL_PROJECTION)
@@ -148,7 +155,7 @@ class ODEViewer(object):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        # View transformation (if "centerOn(...)" is set, keep camera to specific object)
+        # Center the camera on a given object or (0,0,0) if not specified
         if self.centerObj is not None:
             (centerX, centerY, centerZ) = self.centerObj.getPosition()
         else:
@@ -289,7 +296,7 @@ class ODEViewer(object):
     def _display_callback (self):
         """ draw callback function """
         # Draw the scene
-        self.prepare_GL()
+        self.prepare_gl()
 
         if self.message:
             for item in self.message:
@@ -327,6 +334,19 @@ class ODEViewer(object):
         if key == 's':
             self.capture_screen = not self.capture_screen
             print "Screen Capture: " + (self.capture_screen and "on" or "off")
+        elif key == 'f':
+            if self.is_fullscreen:
+                # Toggle out of fullscreen mode
+                glutReshapeWindow(self.width, self.height)
+                glutPositionWindow(0, 0)
+                glutSetCursor(GLUT_CURSOR_INHERIT)
+
+                self.is_fullscreen = False
+            else:
+                # Toggle into fullscreen mode
+                glutFullScreen()
+                glutSetCursor(GLUT_CURSOR_NONE)
+                self.is_fullscreen = True
         elif key in ['x', 'q']:
             sys.exit()
         elif key == 'c':
@@ -356,6 +376,7 @@ class ODEViewer(object):
                 self.motion_zoom_mode = False
 
         return
+
 
     def _motion_callback(self, x, y):
         x_down, y_down = self.motion_last_mouse_down_pos
