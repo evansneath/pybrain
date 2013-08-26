@@ -224,7 +224,7 @@ class ODEViewer(object):
 
         elif item['type'] == 'GeomPlane':
             # set color of plane (currently green)
-            glColor3f(0.2, 0.6, 0.3)
+            glColor3f(0.0, 0.2, 0.0)
 
             # for planes, we need a Quadric object
             quad = gluNewQuadric()
@@ -326,7 +326,7 @@ class ODEViewer(object):
         """ keyboard call-back function. """
         if key == 's':
             self.capture_screen = not self.capture_screen
-            print "Screen Capture: " + (self.self.capture_screen and "on" or "off")
+            print "Screen Capture: " + (self.capture_screen and "on" or "off")
         elif key in ['x', 'q']:
             sys.exit()
         elif key == 'c':
