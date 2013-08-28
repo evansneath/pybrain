@@ -24,9 +24,9 @@ class ODEViewer(object):
         self.verbose = verbose
         self.window_name = window_name
 
-        # initialize the viewport size
-        self.width = 1280
-        self.height = 1024
+        # initialize viewport starting size
+        self.width = 800
+        self.height = 600
 
         # Determine if fullscreen is active or not
         self.is_fullscreen = False
