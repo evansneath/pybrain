@@ -7,33 +7,44 @@ from scipy import array, matrix, sqrt
 import random
 
 class XODEfile(XMLstruct):
-    """
+    """XODEfile class
+
     Creates a (virtual) XODE file, into which bodies, joints and custom
-    parameters can be inserted. This file can be merged at a defined level
-    with other instances of itself, and written to disk in the
+    parameters can be inserted. This file can be merged at a defined
+    level with other instances of itself, and written to disk in the
     standard format.
 
     $Id:xodetools.py 150 2007-04-11 13:42:47Z ruecksti $
     """
-
-    def __init__(self, name, **kwargs):
+    def __init__(self, name):
         """initialize the XODE structure with a name and the world and
         space tags"""
-        super(XODEfile, self).__init__(name, **kwargs)
+        super(XODEfile, self).__init__('world')
 
         self._xodename = name
         self._centerOn = None
         self._affixToEnvironment = None
+
         # sensors is a list of ['type', [args], {kwargs}]
         self.sensors = []
+
         # sensor elements is a list of joints to be used as pressure sensors
         self.sensorElements = []
         self._nSensorElements = 0
-        self._pass = {}     # dict of sets containing objects allowed to pass
-        self._colors = []   # list of tuples ('name', (r,g,b))
-        XMLstruct.__init__(self, 'world')
+
+        # dict of sets containing objects allowed to pass
+        self._pass = {}
+
+        # A list of objects which are not affected by the world gravity
+        self._no_gravity = []
+
+        # list of tuples ('name', (r, g, b))
+        self._colors = []
+
         self.insert('space')
-        # TODO: insert palm, support, etc. (derived class)
+
+        return
+
 
     def _mass2dens(self, shape, size, mass):
         """converts a mass into a density"""
@@ -50,6 +61,9 @@ class XODEfile(XMLstruct):
             print "Unknown shape: " + shape + " not implemented!"
             sys.exit(1)
 
+        return
+
+
     def _dens2mass(self, shape, size, dens):
         """converts a density into a mass"""
         if shape == 'box':
@@ -65,24 +79,32 @@ class XODEfile(XMLstruct):
             print "Unknown shape: " + shape + " not implemented!"
             sys.exit(1)
 
+        return
+
             
-    def insertBody(self, bname, shape, size, density, pos=[0, 0, 0], passSet=None, euler=None, mass=None, color=None):
+    def insertBody(self, bname, shape, size, density, pos=[0, 0, 0],
+            passSet=None, euler=None, mass=None, color=None, has_gravity=True):
         """Inserts a body with the given custom name and one of the standard
         shapes. The size and pos parameters are given as xyz-lists or tuples.
         euler are three rotation angles (degrees), 
         if mass is given, density is calculated automatically"""
         self.insert('body', {'name': bname})
+
         if color is not None:
             self._colors.append((bname, color))
+
         self.insert('transform')
         self.insert('position', {'x':pos[0], 'y':pos[1], 'z':pos[2]})
+
         if euler is not None:
             self.up()
             self.insert('rotation')
             self.insert('euler', {'x':euler[0], 'y':euler[1], 'z':euler[2], 'aformat':'degrees'})
             self.up()
+
         self.up(2)
         self.insert('mass')
+
         if shape == 'box':
             dims = {'sizex':size[0], 'sizey':size[1], 'sizez':size[2]}
         elif shape == 'cylinder' or shape == 'cappedCylinder':
@@ -92,6 +114,7 @@ class XODEfile(XMLstruct):
         else:
             print "Unknown shape: " + shape + " not implemented!"
             sys.exit(1)
+
         if mass is not None:
             density = self._mass2dens(shape, size, mass)
             
@@ -101,6 +124,7 @@ class XODEfile(XMLstruct):
         self.insert('geom')
         self.insert(shape, dims)
         self.up(3)
+
         # add the body to a matching pass set
         if passSet is not None:
             for pset in passSet:
@@ -109,6 +133,12 @@ class XODEfile(XMLstruct):
                 except KeyError:
                     self._pass[pset] = set([bname])
 
+        # If gravity is turned off, add it to the list of objects. These will
+        # be written into the config portion of the xode file
+        if not has_gravity:
+            self._no_gravity.append(bname)
+
+        return
 
 
     def insertJoint(self, body1, body2, type, axis=None, anchor=(0, 0, 0), rel=False, name=None):
@@ -204,6 +234,7 @@ class XODEfile(XMLstruct):
         self.sensorElements.append(jname)
         return name
         
+
     def attachSensor(self, type, *args, **kwargs):
         """adds a sensor with the given type, arguments and keywords, see sensors module for details"""
         self.sensors.append([type, args, kwargs])
@@ -215,13 +246,19 @@ class XODEfile(XMLstruct):
         also joined. Upon return, the current tag for both objects
         is the one given."""
         self.top()
+
         if not self.downTo(joinLevel):
             print "Error: Cannot merge " + self.name + " at level " + joinLevel
         xodefile.top()
+
         if not xodefile.downTo(joinLevel):
             print "Error: Cannot merge " + xodefile.name + " at level " + joinLevel
+
         self.insertMulti(xodefile.getCurrentSubtags())
         self._pass.update(xodefile.getPassList())
+
+        return
+
 
     def centerOn(self, name):
         self._centerOn = name
@@ -229,45 +266,64 @@ class XODEfile(XMLstruct):
 
     def affixToEnvironment(self, name):
         self._affixToEnvironment = name
+        return
+
 
     def getPassList(self):
-        return(self._pass)
+        return self._pass
+
 
     def scaleModel(self, sc):
         """scales all spatial dimensions by the given factor
         FIXME: quaternions may cause problems, which are currently ignored"""
         # scale these attributes...
         scaleset = set(['x', 'y', 'z', 'a', 'b', 'c', 'd', 'sizex', 'sizey', 'sizez', 'length', 'radius']) 
+
         # ... unless contained in these tags (in which case they specify angles)
         exclude = set(['euler', 'finiteRotation', 'axisangle'])
         self.scale(sc, scaleset, exclude)
+
+        return
         
         
     def writeCustomParameters(self, f):
         """writes our custom parameters into an XML comment"""
         f.write('<!--odeenvironment parameters\n')
-        if len(self._pass) > 0:
+        if self._pass:
             f.write('<passpairs>\n')
             for pset in self._pass.itervalues():
                 f.write(str(tuple(pset)) + '\n')
+
+        if self._no_gravity:
+            f.write('<noGravity>\n')
+            for body in self._no_gravity:
+                f.write(body + '\n')
+
         if self._centerOn is not None:
             f.write('<centerOn>\n')
             f.write(self._centerOn + '\n')
+
         if self._affixToEnvironment is not None:
             f.write('<affixToEnvironment>\n')
             f.write(self._affixToEnvironment + '\n')
+
         if self._nSensorElements > 0:
             f.write('<sensors>\n')
             f.write("SpecificJointSensor(" + str(self.sensorElements) + ",name='PressureElements')\n")
+
         # compile all sensor commands
         for sensor in self.sensors:
             outstr = sensor[0] + "("
+
             for val in sensor[1]:
                 outstr += ',' + repr(val)
+
             for key, val in sensor[2].iteritems():
                 outstr += ',' + key + '=' + repr(val)
+
             outstr = outstr.replace('(,', '(') + ")\n"
             f.write(outstr)
+
         if self._colors:
             f.write('<colors>\n')
             for col in self._colors:
@@ -275,6 +331,8 @@ class XODEfile(XMLstruct):
 
         f.write('<end>\n')
         f.write('-->\n')
+
+        return
 
 
     def writeXODE(self, filename=None):
