@@ -24,6 +24,14 @@ class ODEViewer(object):
         self.verbose = verbose
         self.window_name = window_name
 
+        # Determine if the viewport will display in stereoscopic mode
+        self.is_stereoscopic = True
+
+        # Figure out the spacing between cameras for stereoscopic projection
+        # NOTE: Pupillary distance for 95% of men in the USA is 7cm
+        # Source: (Wikipedia: Pupillary Distance)
+        self.stereoscopic_offset = 0.07 / 2.0 # [m]
+
         # initialize viewport starting size
         self.width = 800
         self.height = 600
@@ -32,6 +40,7 @@ class ODEViewer(object):
         self.is_fullscreen = False
 
         self.aspect_ratio = float(self.width) / float(self.height)
+        self.aspect_ratio_changed = False
 
         # initialize object which the camera follows
         self.mouseView = True
@@ -105,12 +114,23 @@ class ODEViewer(object):
         """ initialize OpenGL. This function has to be called only once before drawing. """
         glutInit([])
 
-        # Open a window
-        glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
+        # Set up the new window
         glutInitWindowPosition(0, 0)
         glutInitWindowSize(self.width, self.height)
         glutCreateWindow(self.window_name)
 
+        # Determine if stereoscopic is supported if it is desired
+        if self.is_stereoscopic and not glGetBooleanv(GL_STEREO):
+            print '>>> OpenGL stereoscopic is not supported'
+            print '>>> Reverting to monoscopic viewer'
+            self.is_stereoscopic = False
+
+        # Initialize the display for either stereo or monoscopic
+        if self.is_stereoscopic:
+            glutInitDisplayMode(GLUT_STEREO | GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
+        else:
+            glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH)
+ 
         # Initialize Viewport and Shading
         glViewport(0, 0, self.width, self.height)
         glShadeModel(GL_SMOOTH)
@@ -134,40 +154,156 @@ class ODEViewer(object):
         glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
 
         glEnable(GL_NORMALIZE)
+
         return
+
+
+    def calc_aspect_ratio(self):
+        """Calculate Aspect Ratio
+
+        Recalculates the value of the aspect ratio of the viewport using the
+        width and height of the viewport.
+
+        Returns:
+            The current aspect ratio as a floating point value.
+        """
+        # Calculate the current aspect ratio so we have an accurate model
+        (_, _, x, y) = glGetIntegerv(GL_VIEWPORT)
+
+        # Protect against divide by zero exceptions
+        if y == 0:
+            y = 1
+
+        # Aspect Ratio = Width / Height
+        ratio = float(x) / float(y)
+
+        return ratio
 
 
     def prepare_gl(self):
         """Prepare drawing. This function is called in every step. It clears the screen and sets the new camera position"""
+        # Do prep to determine the center of focus and general camera position
+
+        # Center the camera on a given object or (0, 0, 0) if not specified
+        center = [0.0, 0.0, 0.0]
+
+        if self.centerObj is not None:
+            center[0], center[1], center[2] = self.centerObj.getPosition()
+
+        # Convert spherical to cartesian coordinates
+        cam = [0.0, 0.0, 0.0]
+        cam[0] = self.cam_r * sin(self.cam_theta) * sin(self.cam_phi)
+        cam[1] = self.cam_r * cos(self.cam_theta)
+        cam[2] = self.cam_r * sin(self.cam_theta) * cos(self.cam_phi)
+
+        # If the aspect ratio changed due to fullscreen, recalculate the value
+        if self.aspect_ratio_changed:
+            self.aspect_ratio = self.calc_aspect_ratio()
+
+        # Begin drawing into OpenGL buffers depending on mono or stereoscopic
+        if self.is_stereoscopic:
+            self.prepare_stereoscopic(cam, center, self.stereoscopic_offset)
+        else:
+            self.prepare_monoscopic(cam, center)
+
+        return
+
+
+    def prepare_stereoscopic(self, cam, center, eye_offset):
+        """Prepare Stereoscopic View
+
+        Draws the buffers required for stereoscopic support. Note that
+        if this function is called without verifying that stereoscopic
+        support exists, OpenGL exceptions will be thrown.
+
+        NOTE: The stereoscopic support code was modified from the tutorial for
+        Stereo Geometry in OpenGL. The website can be found here:
+        http://www.orthostereo.com/geometryopengl.html
+
+        Arguments:
+            cam: A 3-element list of [x, y, z] float positions of the camera.
+            center: A 3-element list of [x, y, z] float positions of the
+                object to center the camera on.
+            eye_offset: The distance of each eye to the left and right of the
+                given cam position.
+        """
+        # Calculate the distance of each eye from the center perspective
+
+        # Draw into both back color buffers
+        glDrawBuffer(GL_BACK)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        # Draw the left eye perspective
+        glDrawBuffer(GL_BACK_LEFT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        # Define the perspective based on current aspect ratio
+        gluPerspective(45, self.aspect_ratio, 0.1, 50.0)
+
+        # Draw the world as seen through the left eye
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        # TODO: At the moment, the eye_offset is just given to the x offset.
+        # this is not correct as the z position should also change with
+        # the sperical rotation. y position is not affected.
+
+        # Place the left eye and set the camera's target object
+        gluLookAt(cam[0]-eye_offset, cam[1], cam[2],
+                center[0]-eye_offset, center[1], center[2], 0, 1, 0)
+
+        # Draw the right eye perspective
+        glDrawBuffer(GL_BACK_RIGHT)
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+
+        glMatrixMode(GL_PROJECTION)
+        glLoadIdentity()
+
+        # Define the perspective based on current aspect ratio
+        gluPerspective(45, self.aspect_ratio, 0.1, 50.0)
+
+        # Draw the world as seen through the right eye
+        glMatrixMode(GL_MODELVIEW)
+        glLoadIdentity()
+
+        # Place the left eye and set the camera's target object
+        gluLookAt(cam[0]+eye_offset, cam[1], cam[2],
+                center[0]+eye_offset, center[1], center[2], 0, 1, 0)
+
+        glPopMatrix()
+
+        return
+
+
+    def prepare_monoscopic(self, cam, center):
+        """Prepare Monoscopic View
+
+        Draws the buffer required for single-camera (monoscopic) viewer.
+
+        Arguments:
+            cam: A 3-element list of [x, y, z] float positions of the camera.
+            center: A 3-element list of [x, y, z] float positions of the
+                object to center the camera on.
+        """
         # Clear the screen
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # Calculate the current aspect ratio so we have an accurate model
-        (_, _, x, y) = glGetIntegerv(GL_VIEWPORT)
-        self.aspect_ratio = float(x) / float(y)
-
-        # Projection mode
+        # Load the Projection matrix
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
+
+        # Define the perspective based on current aspect ratio
         gluPerspective(45, self.aspect_ratio, 0.1, 50.0)
 
         # Initialize ModelView matrix
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        # Center the camera on a given object or (0,0,0) if not specified
-        if self.centerObj is not None:
-            (centerX, centerY, centerZ) = self.centerObj.getPosition()
-        else:
-            centerX = centerY = centerZ = 0
-
-        # Convert spherical to cartesian coordinates
-        cam_x = self.cam_r * sin(self.cam_theta) * sin(self.cam_phi)
-        cam_y = self.cam_r * cos(self.cam_theta)
-        cam_z = self.cam_r * sin(self.cam_theta) * cos(self.cam_phi)
-
         # Place the camera and set the camera's target object
-        gluLookAt(cam_x, cam_y, cam_z, centerX, centerY, centerZ, 0, 1, 0)
+        gluLookAt(cam[0], cam[1], cam[2], center[0], center[1], center[2], 0, 1, 0)
 
         return
 
@@ -335,6 +471,8 @@ class ODEViewer(object):
             self.capture_screen = not self.capture_screen
             print "Screen Capture: " + (self.capture_screen and "on" or "off")
         elif key == 'f':
+            self.aspect_ratio_changed = True
+
             if self.is_fullscreen:
                 # Toggle out of fullscreen mode
                 glutReshapeWindow(self.width, self.height)
