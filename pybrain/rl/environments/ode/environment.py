@@ -51,10 +51,12 @@ class ODEEnvironment(Environment):
         """
         # Initialize base class
         self.render = render
+
         if self.render:
             self.updateDone = True
             self.updateLock = threading.Lock()
             self.server = UDPServer(ip, port)
+
         self.realtime = realtime
 
         # Initialize attributes
@@ -92,12 +94,10 @@ class ODEEnvironment(Environment):
 
         return
 
-
     def closeSocket(self):
         self.server.UDPInSock.close()
         time.sleep(10)
         return
-
 
     def resetAttributes(self):
         """resets the class attributes to their default values"""
@@ -108,13 +108,11 @@ class ODEEnvironment(Environment):
         self.body_geom = []
         return
 
-
     def reset(self):
         """resets the model and all its parameters to their original values"""
         self.loadXODE(self._currentXODEfile, reload=True)
         self.stepCounter = 0
         return
-
 
     def stop(self):
         """Stop Simulation
@@ -124,17 +122,13 @@ class ODEEnvironment(Environment):
         """
         del self.world
         ode.CloseODE()
-
         return
-
 
     def setGravity(self, g):
         """set the world's gravity constant in negative y-direction"""
         self.world.setGravity((0, g, 0))
         self.g = g
-
         return
-
 
     def _setWorldParameters(self):
         """ sets parameters for ODE world object: gravity, error correction (ERP, default=0.2),
@@ -145,9 +139,7 @@ class ODEEnvironment(Environment):
         self.world.setContactMaxCorrectingVel(0.1)
         #self.world.setERP(0.2)
         #self.world.setCFM(1e-9)
-
         return
-
 
     def _create_box(self, space, density, lx, ly, lz):
         """Create a box body and its corresponding geom."""
@@ -157,13 +149,13 @@ class ODEEnvironment(Environment):
         M.setBox(density, lx, ly, lz)
         body.setMass(M)
         body.name = None
+
         # Create a box geom for collision detection
         geom = ode.GeomBox(space, lengths=(lx, ly, lz))
         geom.setBody(body)
         geom.name = None
 
         return (body, geom)
-
 
     def _create_sphere(self, space, density, radius):
         """Create a sphere body and its corresponding geom."""
@@ -180,7 +172,6 @@ class ODEEnvironment(Environment):
         geom.name = None
 
         return (body, geom)
-
 
     def drop_object(self):
         """Drops a random object (box, sphere) into the scene."""
@@ -202,8 +193,6 @@ class ODEEnvironment(Environment):
 
         return
 
-
-    # -- sensor and actuator functions
     def addSensor(self, sensor):
         """ adds a sensor object to the list of sensors """
         if not isinstance(sensor, sensors.Sensor):
@@ -214,9 +203,7 @@ class ODEEnvironment(Environment):
 
         # connect sensor and give it the virtual world object
         sensor._connect(self)
-
         return
-
 
     def addActuator(self, actuator):
         """ adds a sensor object to the list of sensors """
@@ -228,18 +215,14 @@ class ODEEnvironment(Environment):
 
         # connect actuator and give it the virtual world object
         actuator._connect(self)
-
         return
-
 
     def addTexture(self, name, texture):
         """ adds a texture to the given ODE object name """
         self.textures[name] = texture
         return
 
-
     def centerOn(self, name):
-        return
         """ if set, keeps camera to the given ODE object name. """
         try:
             self.getRenderer().setCenterObj(self.root.namedChild(name).getODEObject())
@@ -249,7 +232,6 @@ class ODEEnvironment(Environment):
             self.centerObj = None
 
         return
-
 
     def loadXODE(self, filename, reload=False):
         """ loads an XODE file (xml format) and parses it. """
@@ -294,9 +276,7 @@ class ODEEnvironment(Environment):
 
         # now parse the additional parameters at the end of the xode file
         self.loadConfig(filename, reload)
-
         return
-
 
     def loadConfig(self, filename, reload=False):
         # parameters are given in (our own brand of) config-file syntax
@@ -361,7 +341,6 @@ class ODEEnvironment(Environment):
                         body.color = coldef
                         break
 
-
         if not reload:
             # add the JointSensor as default
             self.sensors = []
@@ -385,10 +364,8 @@ class ODEEnvironment(Environment):
 
         return
 
-
     def _parseBodies(self, node):
         """ parses through the xode tree recursively and finds all bodies and geoms for drawing. """
-
         # body (with nested geom)
         if isinstance(node, xode.body.Body):
             body = node.getODEObject()
@@ -444,7 +421,6 @@ class ODEEnvironment(Environment):
 
         return
 
-
     def excludeSensors(self, exclist):
         self.excludesensors.extend(exclist)
         return
@@ -459,14 +435,11 @@ class ODEEnvironment(Environment):
 
         return asarray(output)
 
-
     def getSensorNames(self):
         return [s.name for s in self.sensors]
 
-
     def getActuatorNames(self):
         return [a.name for a in self.actuators]
-
 
     def getSensorByName(self, name):
         try:
@@ -477,7 +450,6 @@ class ODEEnvironment(Environment):
 
         return self.sensors[idx].getValues()
 
-
     @property
     def indim(self):
         num = 0
@@ -487,16 +459,13 @@ class ODEEnvironment(Environment):
 
         return num
 
-
     def getActionLength(self):
         print "getActionLength() is deprecated. use property 'indim' instead."
         return self.indim
 
-
     @property
     def outdim(self):
         return len(self.getSensors())
-
 
     def performAction(self, action):
         """ sets the values for all actuators combined. """
@@ -511,17 +480,17 @@ class ODEEnvironment(Environment):
 
         return
 
-
     def getXODERoot(self):
         return self.root
 
-
     #--- callback functions ---#
     def _near_callback(self, args, geom1, geom2):
-        """Callback function for the collide() method.
+        """Near Callback
+        
+        Callback function for the collide() method.
         This function checks if the given geoms do collide and
-        creates contact joints if they do."""
-
+        creates contact joints if they do.
+        """
         # only check parse list, if objects have name
         if geom1.name != None and geom2.name != None:
             # Preliminary checking, only collide with certain objects
@@ -537,10 +506,13 @@ class ODEEnvironment(Environment):
         # Check if the objects do collide
         contacts = ode.collide(geom1, geom2)
 
-        # Create contact joints
+        # Unpack function arguments
         world, contactgroup = args
+
+        # Create contact joints
         for c in contacts:
             p = c.getContactGeomParams()
+
             # parameters from Niko Wolf
             c.setBounce(0.2)
             c.setBounceVel(0.05) #Set the minimum incoming velocity necessary for bounce
@@ -549,12 +521,12 @@ class ODEEnvironment(Environment):
             c.setSlip1(0.02) #Set the coefficient of force-dependent-slip (FDS) for friction direction 1
             c.setSlip2(0.02) #Set the coefficient of force-dependent-slip (FDS) for friction direction 2
             c.setMu(self.FricMu) #Set the Coulomb friction coefficient
+
             j = ode.ContactJoint(world, contactgroup, c)
             j.name = None
             j.attach(geom1.getBody(), geom2.getBody())
 
         return
-
 
     def getCurrentStep(self):
         return self.stepCounter
@@ -624,7 +596,6 @@ class ODEEnvironment(Environment):
 
         return
 
-
     def step(self):
         """ Here the ode physics is calculated by one step. """
 
@@ -636,6 +607,7 @@ class ODEEnvironment(Environment):
 
         # Simulation step
         self.world.step(float(self.dt))
+
         # Remove all contact joints
         self.contactgroup.empty()
 
@@ -655,15 +627,12 @@ class ODEEnvironment(Environment):
 
         return self.stepCounter
 
-
     def _printfunc (self):
         pass
-
 
     def specialkeyfunc(self, c, x, y):
         """Derived classes can implement extra functionality here"""
         pass
-
 
     #--- helper functions ---#
     def _print_help(self):
@@ -686,7 +655,6 @@ class ODEEnvironment(Environment):
 
 
 #--- main function, if called directly ---
-
 if __name__ == '__main__' :
     """
     little example on how to use the virtual world.
