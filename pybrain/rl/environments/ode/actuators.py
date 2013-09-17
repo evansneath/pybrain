@@ -1,8 +1,11 @@
 __author__ = 'Thomas Rueckstiess, ruecksti@in.tum.de'
 
-import ode, xode #@UnresolvedImport
+import ode
+import xode
 from pybrain.utilities import Named
-import sys, warnings
+import sys
+import warnings
+
 
 class Actuator(Named):
     """The base Actuator class. Every actuator has a name, and a list of values (even if it is
@@ -27,7 +30,6 @@ class Actuator(Named):
         return self._numValues
 
 
-
 class JointActuator(Actuator):
     ''' This actuator parses the xode root node for all joints and applies a torque
         to the angles of each of them. Different joints have a different number of values (e.g.
@@ -37,7 +39,11 @@ class JointActuator(Actuator):
 
     def __init__(self, name='JointActuator'):
         Actuator.__init__(self, name, 0)
+
         self._joints = []
+        self._numValues = 0
+
+        return
 
     def _parseJoints(self, node):
         if isinstance(node, xode.joint.Joint):
@@ -198,3 +204,6 @@ class CopyJointActuator(JointActuator):
                 # to the joint.
                 pass
 
+
+if __name__ == '__main__':
+    pass

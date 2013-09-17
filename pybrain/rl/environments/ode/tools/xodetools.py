@@ -6,6 +6,7 @@ from math import asin, cos, sin, pi, degrees, radians, pow
 from scipy import array, matrix, sqrt
 import random
 
+
 class XODEfile(XMLstruct):
     """XODEfile class
 
@@ -45,7 +46,6 @@ class XODEfile(XMLstruct):
 
         return
 
-
     def _mass2dens(self, shape, size, mass):
         """converts a mass into a density"""
         if shape == 'box':
@@ -63,7 +63,6 @@ class XODEfile(XMLstruct):
 
         return
 
-
     def _dens2mass(self, shape, size, dens):
         """converts a density into a mass"""
         if shape == 'box':
@@ -80,7 +79,6 @@ class XODEfile(XMLstruct):
             sys.exit(1)
 
         return
-
             
     def insertBody(self, bname, shape, size, density, pos=[0, 0, 0],
             passSet=None, euler=None, mass=None, color=None, has_gravity=True):
@@ -140,7 +138,6 @@ class XODEfile(XMLstruct):
 
         return
 
-
     def insertJoint(self, body1, body2, type, axis=None, anchor=(0, 0, 0), rel=False, name=None):
         """Inserts a joint of given type linking the two bodies. Default name is
         a "_"-concatenation of the body names. The anchor is a xyz-tuple, rel is 
@@ -171,12 +168,13 @@ class XODEfile(XMLstruct):
             self.up()
             self.insert('anchor', {'x':anchor[0], 'y':anchor[1], 'z':anchor[2], 'absolute':abs})
             self.up()
+        elif type == 'amotor':
+            self.insert(None)
         else:
             print "Sorry, joint type " + type + " not yet implemented!"
             sys.exit()
         self.up(2)
         return name
-
 
     def insertFloor(self, y= -0.5):
         """inserts a bodiless floor at given y offset"""
@@ -234,11 +232,9 @@ class XODEfile(XMLstruct):
         self.sensorElements.append(jname)
         return name
         
-
     def attachSensor(self, type, *args, **kwargs):
         """adds a sensor with the given type, arguments and keywords, see sensors module for details"""
         self.sensors.append([type, args, kwargs])
-        
         
     def merge(self, xodefile, joinLevel='space'):
         """Merge a second XODE file into this one, at the specified
@@ -259,19 +255,15 @@ class XODEfile(XMLstruct):
 
         return
 
-
     def centerOn(self, name):
         self._centerOn = name
-
 
     def affixToEnvironment(self, name):
         self._affixToEnvironment = name
         return
 
-
     def getPassList(self):
         return self._pass
-
 
     def scaleModel(self, sc):
         """scales all spatial dimensions by the given factor
@@ -284,7 +276,6 @@ class XODEfile(XMLstruct):
         self.scale(sc, scaleset, exclude)
 
         return
-        
         
     def writeCustomParameters(self, f):
         """writes our custom parameters into an XML comment"""
@@ -334,7 +325,6 @@ class XODEfile(XMLstruct):
 
         return
 
-
     def writeXODE(self, filename=None):
         """writes the created structure (plus header and footer) to file with
         the given basename (.xode is appended)"""
@@ -349,8 +339,8 @@ class XODEfile(XMLstruct):
         f.close()
         print "Wrote " + filename + '.xode'
 
-class XODEfinger(XODEfile):
 
+class XODEfinger(XODEfile):
     def __init__(self, name, **kwargs):
         """Creates one finger on a fixed palm, and adds some sensors"""
         XODEfile.__init__(self, name, **kwargs)
@@ -385,7 +375,7 @@ class XODEfinger(XODEfile):
         for _ in range(5):
             self.insertHapticSensor(dx=random.uniform(-0.65, 0.65), dz=random.uniform(-0.4, 0.2))
         ##self.insertHapticSensor(dx=-0.055)
-
+        return
 
     def insertHapticSensors(self):
         """insert haptic sensors at predetermined locations
@@ -397,6 +387,7 @@ class XODEfinger(XODEfile):
         for _ in range(nSens):
             self.insertHapticSensor(dx=x.pop(), dz=z.pop())
 
+        return
 
     def insertSampleStructure(self, angle=None):
         pass
@@ -426,9 +417,10 @@ class XODEfinger(XODEfile):
         self.insertJoint('fingertip', name, 'slider', name=jname, \
             axis={'x':-dx, 'y':-dy, 'z':0, "HiStop":0.0, "LowStop":0.0, "StopERP":0.022, "StopCFM":0.22 })
         self.sensorElements.append(jname)
+        return
+
 
 class XODEhand(XODEfile):
-
     def __init__(self, name, **kwargs):
         """Creates hand with fingertip and palm sensors -- palm up"""
         XODEfile.__init__(self, name, **kwargs)
@@ -474,10 +466,10 @@ class XODEhand(XODEfile):
         self._nSensorElements = 0
         self.sensorElements = []
         self.sensorGroupName = None
+        return
 
 
 class XODEhandflip(XODEfile):
-
     def __init__(self, name, **kwargs):
         """Creates hand with fingertip and palm sensors -- palm down"""
         XODEfile.__init__(self, name, **kwargs)
@@ -525,10 +517,10 @@ class XODEhandflip(XODEfile):
         self._nSensorElements = 0
         self.sensorElements = []
         self.sensorGroupName = None
+        return
 
 
 class HapticTestSetupWithRidges(XODEfinger):
-
     def insertSampleStructure(self, angle=30, std=0.05, dist=0.9, **kwargs):
         """create some ridges on the sample"""
         for i in range(16):
@@ -536,13 +528,15 @@ class HapticTestSetupWithRidges(XODEfinger):
             self.insertBody(name, 'cappedCylinder', [0.2, 10], 5, pos=[0, 0.5, random.gauss(15 - dist * i, std)], euler=[0, angle, 0], passSet=['sam'])
             self.insertJoint('sample', name, 'fixed')
 
+        return
+
 
 class HapticTestSetupWithSpheres(XODEfinger):
-
     def insertSampleStructure(self, xoffs=0.0, std=0.025, dist=0.9, **kwargs):
         """create four rows of spheres on the sample"""
         dx = [dist * k for k in [-1, 0, 1]]
         dz = [dist * k * 0.5 for k in [0, 1, 0]]
+
         for i in range(16):
             for k in range(3):
                 x = random.gauss(dx[k] + xoffs, std)
@@ -551,14 +545,16 @@ class HapticTestSetupWithSpheres(XODEfinger):
                 self.insertBody(name, 'sphere', [0.2], 5, pos=[x, 0.5, z], passSet=['sam'])
                 self.insertJoint('sample', name, 'fixed')
 
+        return
+
 
 class HapticTestSetupWithSpirals(XODEfinger):
-
     def insertSampleStructure(self, std=0.05, xoffs=0.0, dist=1.0, **kwargs):
         """create elongated spiral pattern"""
         rg = 50
         phi = [2.3 + sqrt(f) * pi * 10 / sqrt(rg) for f in range(rg)]
         r = [sqrt(f) * 2.5 / sqrt(rg) for f in range(rg)]
+
         for k in range(rg):
             x = random.gauss(cos(phi[k]) * r[k], std)
             z = random.gauss(5 + sin(phi[k]) * r[k] * 3, std)
@@ -566,17 +562,20 @@ class HapticTestSetupWithSpirals(XODEfinger):
             self.insertBody(name, 'sphere', [0.2], 5, pos=[x, 0.5, z], passSet=['sam'])
             self.insertJoint('sample', name, 'fixed')
 
+        return
+
 
 class HapticTestSetupWithSine(XODEfinger):
-
     def insertSampleStructure(self, angle=0, std=0.05, xoffs=0.0, dist=1.0, **kwargs):
         """create rotated sine pattern"""
         rg = 50
         z = [f * 10.0 / rg for f in range(rg)]
         x = [sin(f * 2) * sin(f / 3) * 3.5 for f in z]
         z = [f - 5 for f in z]
+
         for i in range(rg):
             r = sqrt(x[i] * x[i] + z[i] * z[i])
+
             if r > 0:
                 phi = asin(x[i] / r)
                 if z[i] < 0: phi = pi - phi
@@ -587,8 +586,10 @@ class HapticTestSetupWithSine(XODEfinger):
             self.insertBody(name, 'sphere', [0.2], 5, pos=[x[i], 0.5, z[i]], passSet=['sam'])
             self.insertJoint('sample', name, 'fixed')
 
-class XODEJohnnie(XODEfile):
+        return
 
+
+class XODEJohnnie(XODEfile):
     def __init__(self, name, **kwargs):
         """Creates hand with fingertip and palm sensors -- palm up"""
         XODEfile.__init__(self, name, **kwargs)
@@ -628,6 +629,8 @@ class XODEJohnnie(XODEfile):
         self._nSensorElements = 0
         self.sensorElements = []
         self.sensorGroupName = None
+        return
+
 
 class XODESLR(XODEfile):
     def __init__(self, name, **kwargs):
@@ -687,6 +690,8 @@ class XODESLR(XODEfile):
         self._nSensorElements = 0
         self.sensorElements = []
         self.sensorGroupName = None
+        return
+
 
 class XODELSRTable(XODESLR): #XODESLR
     def __init__(self, name, **kwargs):
@@ -701,6 +706,8 @@ class XODELSRTable(XODESLR): #XODESLR
         self.insertJoint('plate', 'leg3', 'fixed', axis={'x':0, 'y':0, 'z':0}, anchor=(-5.5, 0.0, -10.5))
         self.insertBody('leg4', 'box', [0.5, 8.0, 0.5], 30, pos=[-19.5, -4.0, -10.5], passSet=['table'], mass=0.3, color=(0.6, 0.8, 0.8, 0.8))
         self.insertJoint('plate', 'leg4', 'fixed', axis={'x':0, 'y':0, 'z':0}, anchor=(-19.5, 0.0, -10.5))
+        return
+
 
 class XODELSRGlas(XODELSRTable): #XODESLR
     def __init__(self, name, **kwargs):
@@ -711,6 +718,8 @@ class XODELSRGlas(XODELSRTable): #XODESLR
         self.insertBody('objectP02', 'box', [0.45, 0.02, 0.45], 30, pos=[-6.5, 2.01, -11.0], passSet=['object'], mass=0.01)
         self.insertJoint('objectP00', 'objectP01', 'fixed', axis={'x':0, 'y':0, 'z':0}, anchor=(-6.5, 1.01, -11.0))
         self.insertJoint('objectP00', 'objectP02', 'fixed', axis={'x':0, 'y':0, 'z':0}, anchor=(-6.5, 2.01, -11.0))
+        return
+
 
 class XODELSRPlate(XODELSRTable): #XODESLR
     def __init__(self, name, **kwargs):
@@ -745,8 +754,10 @@ class XODELSRPlate(XODELSRTable): #XODESLR
 
         self.insertBody('objectP04', 'box', [sX, sY, sZ], 30, pos=[pX, pY + dif, pZ - bZ * 0.5 - 2.0 * dif], passSet=['object'], mass=m, euler=[0, 90, 22.5], color=c)
         self.insertJoint('objectP00', 'objectP04', 'fixed', axis={'x':0, 'y':0, 'z':0}, anchor=(pX, pY, pZ - bZ * 0.5))
-        if __name__ == '__main__' :
+        return
 
+
+if __name__ == '__main__' :
     table = XODELSRPlate('../models/ccrlPlate')
     
     #z = XODESLR('../models/slr')
@@ -756,4 +767,3 @@ class XODELSRPlate(XODELSRTable): #XODESLR
     #z.scaleModel(0.5)
     
     table.writeXODE()
-
