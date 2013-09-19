@@ -168,8 +168,6 @@ class XODEfile(XMLstruct):
             self.up()
             self.insert('anchor', {'x':anchor[0], 'y':anchor[1], 'z':anchor[2], 'absolute':abs})
             self.up()
-        elif type == 'amotor':
-            self.insert(None)
         else:
             print "Sorry, joint type " + type + " not yet implemented!"
             sys.exit()
