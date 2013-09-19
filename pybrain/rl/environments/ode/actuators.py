@@ -131,7 +131,7 @@ class SpecificJointActuator(JointActuator):
                 self._joints.append(self._world.getXODERoot().namedChild(name).getODEObject())
             except KeyError:
                 # the given object name is not found. output warning and quit.
-                warnings.warn("Joint with name '", name, "' not found.")
+                warnings.warn("Joint with name '%s' not found." % (name))
                 sys.exit()
 
     def _connect(self, world):
@@ -160,7 +160,7 @@ class CopyJointActuator(JointActuator):
                 self._joints.append(self._world.getXODERoot().namedChild(name).getODEObject())
             except KeyError:
                 # the given object name is not found. output warning and quit.
-                warnings.warn("Joint with name '", name, "' not found.")
+                warnings.warn("Joint with name '%s' not found." % (name))
                 sys.exit()
 
     def _connect(self, world):
