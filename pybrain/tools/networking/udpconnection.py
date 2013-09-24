@@ -46,8 +46,8 @@ class UDPServer(object):
 
         return
 
-    # Adding a client to the list
     def addClient(self, cIP):
+        # Adding a client to the list
         self.cIP.append(cIP)
         self.addrList.append((cIP, self.outPort))
         self.UDPOutSockList.append(socket.socket(socket.AF_INET,
@@ -59,9 +59,8 @@ class UDPServer(object):
 
         return
 
-
-    # Listen for clients
     def listen(self):
+        # Listen for clients
         if self.clients < 1:
             self.UDPInSock.settimeout(10)
             try:
@@ -96,7 +95,6 @@ class UDPServer(object):
 
         return
 
-
     # Sending the actual data too all clients
     def send(self, arrayList):
         data = repr(arrayList)
@@ -128,8 +126,8 @@ class UDPServer(object):
         return
 
 
-# The client class
 class UDPClient(object):
+    # The client class
     def __init__(self, servIP='127.0.0.1', ownIP='127.0.0.1', port="21560",
             buf='16384', verbose=False):
         self.verbose = verbose
@@ -151,9 +149,10 @@ class UDPClient(object):
 
         return
 
-
     # Listen for data from server
-    def listen(self, arrayList=None):
+    def listen(self):
+        data_obj = None
+
         # Send alive signal (own IP adress)
         self.UDPOutSock.sendto(self.ownIP, self.outAddr)
 
@@ -162,48 +161,50 @@ class UDPClient(object):
 
         self.listen_attempts += 1
 
-        try:
-            data = ''
+        data = ''
 
-            # Get all data associated with packets sent over. Each packet has
-            # the following format:
-            # [<more_data_flag (1 byte)>, <application_data (x bytes)>]
+        # Get all data associated with packets sent over. Each packet has
+        # the following format:
+        # [<more_data_flag (1 byte)>, <application_data (x bytes)>]
 
-            # If the more_data_flag is set, this means that the application
-            # data was sent in more than one packet and must be reconstructed
-            while True:
-                # Receive data over UDP socket connection
-                packet = self.UDPInSock.recv(self.buf)
-
-                # Extract all application data
-                data += packet[1:]
-
-                # There are no more packets associated with this data blob
-                if not int(packet[0]):
-                    break
-
+        # If the more_data_flag is set, this means that the application
+        # data was sent in more than one packet and must be reconstructed
+        while True:
+            # Receive data over UDP socket connection
             try:
-                arrayList = eval(data)
-                return arrayList
+                packet = self.UDPInSock.recv(self.buf)
             except:
-                if self.verbose:
-                    print ('Unsupported data format received from UDP server at %s'
-                        % (self.outAddr))
-                return None
+                # Display this message
+                if self.verbose and (self.listen_attempts * self.timeout) % 10 == 0:
+                    print 'No connection to UDP server'
+                raise
 
+            # Extract all application data
+            data += packet[1:]
+
+            # There are no more packets associated with this data blob
+            if not int(packet[0]):
+                break
+
+        try:
+            data_obj = eval(data)
         except:
-            # Display this message
-            if self.verbose and (self.listen_attempts * self.timeout) % 10 == 0:
-                print 'No connection to UDP server'
+            if self.verbose:
+                print ('Unsupported data format received from UDP server at %s'
+                    % (self.outAddr))
+            raise
 
-            return None
+        return data_obj
 
-
-    # Creating the sockets
     def createSockets(self):
+        # Creating the sockets
         self.UDPOutSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.UDPOutSock.sendto(self.ownIP, self.outAddr)
         self.UDPInSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.UDPInSock.bind(self.inAddr)
 
         return
+
+
+if __name__ == '__main__':
+    pass
