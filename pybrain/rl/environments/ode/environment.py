@@ -89,6 +89,10 @@ class ODEEnvironment(Environment):
         # Determine world gravity based on the initialization argument
         self.g = gravity
 
+        # Store all geometries/bodies sent to the OpenGL renderer to determine
+        # if they have been modified or not
+        self.prev_message = {}
+
         if self.verbose:
             print "ODEEnvironment -- based on Open Dynamics Engine."
 
@@ -539,14 +543,37 @@ class ODEEnvironment(Environment):
             return
 
         # build message to send
-        message = []
-        for (body, geom) in self.body_geom:
+        message = {}
+
+        for body, geom in self.body_geom:
             item = {}
-            # real bodies (boxes, spheres, ...)
+
+            item_name = ''
+
             if body != None:
+                item_name = body.name
+                item_pos = body.getPosition()
+                item_rot = body.getRotation()
+
+                # Try to find this body from the previous message. See if
+                # the item exists and has changed. If it is modified, then
+                # the item must be sent. If not, it is implied that the body
+                # has not changed.
+                try:
+                    prev_item = self.prev_message[item_name]
+
+                    # The item existed previously, see if it has changed
+                    if (prev_item['position'] == item_pos and
+                            prev_item['rotation'] == item_rot):
+                        # The item has not changed. Don't add it to the message
+                        continue
+                except KeyError:
+                    # Couldn't find the body. Send it to the renderer
+                    pass
+
                 # transform (rotate, translate) body accordingly
-                item['position'] = body.getPosition()
-                item['rotation'] = body.getRotation()
+                item['position'] = item_pos
+                item['rotation'] = item_rot
 
                 if hasattr(body, 'color'):
                     item['color'] = body.color
@@ -577,19 +604,24 @@ class ODEEnvironment(Environment):
                     pass
 
             else:
+                item_name = geom.name
+
                 # no body found, then it must be a plane (we only draw planes)
                 if type(geom) == ode.GeomPlane:
                     item['type'] = 'GeomPlane'
                     item['normal'] = geom.getParams()[0] # the normal vector to the plane
                     item['distance'] = geom.getParams()[1] # the distance to the origin
 
-            message.append(item)
+            message[item_name] = item
 
         # Listen for clients
         self.server.listen()
         if self.server.clients > 0:
             # If there are clients send them the new data
             self.server.send(message)
+
+        # Store the message items in their current positions and rotations
+        self.prev_message = message
 
         self.updateLock.release()
         self.updateDone = True

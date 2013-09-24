@@ -71,7 +71,7 @@ class ODEViewer(object):
         self.capture_screen = False
 
         self.message = None
-        self.old_message = None
+        self.prev_message = None
 
         # capture only every frameT. frame
         self.counter = 0
@@ -421,7 +421,7 @@ class ODEViewer(object):
         self.prepare_gl()
 
         if self.message is not None:
-            for item in self.message:
+            for item_name, item in self.message.iteritems():
                 try:
                     # Attempt to draw in item from the message
                     self.draw_item(item)
@@ -446,10 +446,17 @@ class ODEViewer(object):
 
         if self.message is None:
             # If the message wasn't properly received, use the old message
-            self.message = self.old_message
+            self.message = self.prev_message
         else:
-            # Message received in full. Store it for future use
-            self.old_message = self.message
+            # Message received in full. Fill in any unsent items from the
+            # previous message. These have not been modified
+            if self.prev_message is not None:
+                for item_name, item in self.prev_message.iteritems():
+                    if item_name not in self.message:
+                        self.message[item_name] = item
+
+            #Store it for future use
+            self.prev_message = self.message
 
         # NOTE: This should be uncommented if real-time contraints are not
         # handled in the main loop of your application
