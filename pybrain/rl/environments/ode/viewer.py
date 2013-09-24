@@ -131,7 +131,9 @@ class ODEViewer(object):
         glViewport(0, 0, self.width, self.height)
         glShadeModel(GL_SMOOTH)
         glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST)
-        glClearColor(1.0, 1.0, 1.0, 0.0)
+
+        #glClearColor(1.0, 1.0, 1.0, 0.0)
+        glClearColor(0.52, 0.80, 0.98, 1.0)
 
         # Initialize Depth Buffer
         glClearDepth(1.0)
@@ -140,7 +142,7 @@ class ODEViewer(object):
 
         # Initialize Lighting
         glEnable(GL_LIGHTING)
-        glLightfv(GL_LIGHT1, GL_AMBIENT, [0.5, 0.5, 0.5, 1.0])
+        glLightfv(GL_LIGHT1, GL_AMBIENT, [0.7, 0.7, 0.7, 1.0])
         glLightfv(GL_LIGHT1, GL_DIFFUSE, [1.0, 1.0, 1.0, 1.0])
         glLightfv(GL_LIGHT1, GL_POSITION, [0.0, 5.0, 5.0, 1.0])
         glEnable(GL_LIGHT1)
@@ -308,7 +310,7 @@ class ODEViewer(object):
 
         glPushMatrix()
 
-        if item['type'] in ['GeomBox', 'GeomSphere', 'GeomCylinder', 'GeomCCylinder']:
+        if item['type'] in ['box', 'sphere', 'cylinder', 'ccylinder']:
             # set color of object (currently dark gray)
             if item.has_key('color'):
                 glEnable(GL_BLEND)
@@ -328,32 +330,32 @@ class ODEViewer(object):
             glMultMatrixd(rot)
 
             # switch different geom objects
-            if item['type'] == 'GeomBox':
+            if item['type'] == 'box':
                 # cube
                 (sx, sy, sz) = item['scale']
-                glScaled(sx, sy, sz)
-                glutSolidCube(1)
-            elif item['type'] == 'GeomSphere':
+                glScaled(float(sx), float(sy), float(sz))
+                glutSolidCube(1.0)
+            elif item['type'] == 'sphere':
                 # sphere
                 glutSolidSphere(item['radius'], 20, 20)
-            elif item['type'] == 'GeomCCylinder':
+            elif item['type'] == 'ccylinder':
                 quad = gluNewQuadric()
                 # draw cylinder and two spheres, one at each end
-                glTranslate(0, 0, -item['length']/2)
+                glTranslate(0.0, 0.0, -item['length']/2.0)
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
                 glutSolidSphere(item['radius'], 20, 20)
-                glTranslate(0, 0, item['length'])
+                glTranslate(0.0, 0.0, item['length'])
                 glutSolidSphere(item['radius'], 20, 20)
-            elif item['type'] == 'GeomCylinder':
-                glTranslate(0, 0, -item['length']/2)
+            elif item['type'] == 'cylinder':
+                glTranslate(0.0, 0.0, -item['length']/2.0)
                 quad = gluNewQuadric()
                 gluDisk(quad, 0, item['radius'], 32, 1)
                 quad = gluNewQuadric()
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
-                glTranslate(0, 0, item['length'])
+                glTranslate(0.0, 0.0, item['length'])
                 quad = gluNewQuadric()
-                gluDisk(quad, 0, item['radius'], 32, 1)
-        elif item['type'] == 'GeomPlane':
+                gluDisk(quad, 0.0, item['radius'], 32, 1)
+        elif item['type'] == 'plane':
             # set color of plane (currently green)
             glColor3f(0.0, 0.2, 0.0)
 

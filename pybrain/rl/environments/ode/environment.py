@@ -559,17 +559,18 @@ class ODEEnvironment(Environment):
                 # the item exists and has changed. If it is modified, then
                 # the item must be sent. If not, it is implied that the body
                 # has not changed.
-                try:
+                if item_name in self.prev_message:
+                    # The item has been sent before
                     prev_item = self.prev_message[item_name]
 
-                    # The item existed previously, see if it has changed
+                    # See if the item has been modified
                     if (prev_item['position'] == item_pos and
                             prev_item['rotation'] == item_rot):
                         # The item has not changed. Don't add it to the message
                         continue
-                except KeyError:
-                    # Couldn't find the body. Send it to the renderer
-                    pass
+
+                # The item wasn't in the previous message or has been altered.
+                # Send the new info to the viewer
 
                 # transform (rotate, translate) body accordingly
                 item['position'] = item_pos
@@ -581,34 +582,35 @@ class ODEEnvironment(Environment):
                 # switch different geom objects
                 if type(geom) == ode.GeomBox:
                     # cube
-                    item['type'] = 'GeomBox'
+                    item['type'] = 'box'
                     item['scale'] = geom.getLengths()
                 elif type(geom) == ode.GeomSphere:
                     # sphere
-                    item['type'] = 'GeomSphere'
+                    item['type'] = 'sphere'
                     item['radius'] = geom.getRadius()
 
                 elif type(geom) == ode.GeomCCylinder:
                     # capped cylinder
-                    item['type'] = 'GeomCCylinder'
+                    item['type'] = 'ccylinder'
                     item['radius'] = geom.getParams()[0]
                     item['length'] = geom.getParams()[1] - 2 * item['radius']
 
                 elif type(geom) == ode.GeomCylinder:
                     # solid cylinder
-                    item['type'] = 'GeomCylinder'
+                    item['type'] = 'cylinder'
                     item['radius'] = geom.getParams()[0]
                     item['length'] = geom.getParams()[1]
-                else:
-                    # TODO: add other geoms here
-                    pass
-
             else:
                 item_name = geom.name
 
+                # See if the item exists in the previous message. If so, the
+                # viewer is already aware of it.
+                if item_name in self.prev_message:
+                    continue
+
                 # no body found, then it must be a plane (we only draw planes)
                 if type(geom) == ode.GeomPlane:
-                    item['type'] = 'GeomPlane'
+                    item['type'] = 'plane'
                     item['normal'] = geom.getParams()[0] # the normal vector to the plane
                     item['distance'] = geom.getParams()[1] # the distance to the origin
 
