@@ -1,14 +1,14 @@
 __author__ = 'Martin Felder, felder@in.tum.de'
 
-from OpenGL.GL import * #@UnusedWildImport
-from OpenGL.GLU import * #@UnusedWildImport
-from OpenGL.GLUT import * #@UnusedWildImport
+from OpenGL.GL import *
+from OpenGL.GLU import *
+from OpenGL.GLUT import *
 
 from math import sin, asin, cos, acos, pi, sqrt
 from tools.mathhelpers import crossproduct, norm, dotproduct
 
 import time
-import Image #@UnresolvedImport
+import Image
 
 from pybrain.tools.networking.udpconnection import UDPClient
 
@@ -71,6 +71,7 @@ class ODEViewer(object):
         self.capture_screen = False
 
         self.message = None
+        self.old_message = None
 
         # capture only every frameT. frame
         self.counter = 0
@@ -88,27 +89,22 @@ class ODEViewer(object):
 
         # initialize udp client
         self.client = UDPClient(servIP, ownIP, port, buf, verbose=self.verbose)
-
         return
-
 
     def start(self):
         # start the OpenGL main loop
         glutMainLoop()
         return
 
-
     def set_dt(self, dt):
         self.dt = dt
         self.fps = 1.0 / self.dt
         return
 
-
     def set_fps(self, fps):
         self.fps = fps
         self.dt = 1.0 / self.fps
         return
-
 
     def init_gl(self):
         """ initialize OpenGL. This function has to be called only once before drawing. """
@@ -157,7 +153,6 @@ class ODEViewer(object):
 
         return
 
-
     def calc_aspect_ratio(self):
         """Calculate Aspect Ratio
 
@@ -178,7 +173,6 @@ class ODEViewer(object):
         ratio = float(x) / float(y)
 
         return ratio
-
 
     def prepare_gl(self):
         """Prepare drawing. This function is called in every step. It clears the screen and sets the new camera position"""
@@ -208,7 +202,6 @@ class ODEViewer(object):
 
         return
 
-
     def prepare_stereoscopic(self, cam, center, eye_offset):
         """Prepare Stereoscopic View
 
@@ -228,7 +221,6 @@ class ODEViewer(object):
                 given cam position.
         """
         # Calculate the distance of each eye from the center perspective
-
         # Draw into both back color buffers
         glDrawBuffer(GL_BACK)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -273,10 +265,7 @@ class ODEViewer(object):
         gluLookAt(cam[0]+eye_offset, cam[1], cam[2],
                 center[0]+eye_offset, center[1], center[2], 0, 1, 0)
 
-        glPopMatrix()
-
         return
-
 
     def prepare_monoscopic(self, cam, center):
         """Prepare Monoscopic View
@@ -307,9 +296,14 @@ class ODEViewer(object):
 
         return
 
-
     def draw_item(self, item):
-        """ draws an object (spere, cube, plane, ...) """
+        """Draw Item
+
+        Draws an object from the ODE specifications.
+
+        Arguments:
+            item: A dictionary containing keys relating to an ODE geometry.
+        """
         glDisable(GL_TEXTURE_2D)
 
         glPushMatrix()
@@ -342,29 +336,23 @@ class ODEViewer(object):
             elif item['type'] == 'GeomSphere':
                 # sphere
                 glutSolidSphere(item['radius'], 20, 20)
-
             elif item['type'] == 'GeomCCylinder':
                 quad = gluNewQuadric()
                 # draw cylinder and two spheres, one at each end
-                glTranslate(0.0, 0.0, -item['length'] / 2)
+                glTranslate(0, 0, -item['length']/2)
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
                 glutSolidSphere(item['radius'], 20, 20)
-                glTranslate(0.0, 0.0, item['length'])
+                glTranslate(0, 0, item['length'])
                 glutSolidSphere(item['radius'], 20, 20)
-
             elif item['type'] == 'GeomCylinder':
-                glTranslate(0.0, 0.0, -item['length'] / 2)
+                glTranslate(0, 0, -item['length']/2)
                 quad = gluNewQuadric()
                 gluDisk(quad, 0, item['radius'], 32, 1)
                 quad = gluNewQuadric()
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
-                glTranslate(0.0, 0.0, item['length'])
+                glTranslate(0, 0, item['length'])
                 quad = gluNewQuadric()
                 gluDisk(quad, 0, item['radius'], 32, 1)
-            else:
-                # TODO: add other geoms here
-                pass
-
         elif item['type'] == 'GeomPlane':
             # set color of plane (currently green)
             glColor3f(0.0, 0.2, 0.0)
@@ -391,7 +379,6 @@ class ODEViewer(object):
 
         glPopMatrix()
         return
-
 
     @staticmethod
     def _loadTexture(textureFile):
@@ -428,15 +415,20 @@ class ODEViewer(object):
         gluBuild2DMipmaps(GL_TEXTURE_2D, 3, ix, iy, GL_RGBA, GL_UNSIGNED_BYTE, image)
         return textures
 
-
     def _display_callback (self):
         """ draw callback function """
         # Draw the scene
         self.prepare_gl()
 
-        if self.message:
+        if self.message is not None:
             for item in self.message:
-                self.draw_item(item)
+                try:
+                    # Attempt to draw in item from the message
+                    self.draw_item(item)
+                except:
+                    # If something goes wrong in draw_item, we need to
+                    # pop the matrix to prevent stack overflow
+                    glPopMatrix()
 
         glutSwapBuffers()
 
@@ -445,13 +437,19 @@ class ODEViewer(object):
 
         return
 
-
     def _idle_callback(self):
-        # Get the very latest data
+        # Listen for the latest data
         try:
             self.message = self.client.listen()
         except:
             pass
+
+        if self.message is None:
+            # If the message wasn't properly received, use the old message
+            self.message = self.old_message
+        else:
+            # Message received in full. Store it for future use
+            self.old_message = self.message
 
         # NOTE: This should be uncommented if real-time contraints are not
         # handled in the main loop of your application
@@ -463,7 +461,6 @@ class ODEViewer(object):
         # Display the latest data directly after receiving
         glutPostRedisplay()
         return
-
 
     def _keyboard_callback(self, key, x, y):
         """ keyboard call-back function. """
@@ -495,7 +492,6 @@ class ODEViewer(object):
 
         return
 
-
     def _mouse_callback(self, button, state, x, y):
         if state == GLUT_DOWN:
             self.motion_last_mouse_down_pos = (x, y)
@@ -514,7 +510,6 @@ class ODEViewer(object):
                 self.motion_zoom_mode = False
 
         return
-
 
     def _motion_callback(self, x, y):
         x_down, y_down = self.motion_last_mouse_down_pos
@@ -543,10 +538,8 @@ class ODEViewer(object):
 
         return
 
-
     def _passive_motion_callback(self, x, z):
         pass
-
 
     def _screenshot(self, path_prefix='.', format='PNG'):
         """Saves a screenshot of the current frame buffer.
