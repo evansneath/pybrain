@@ -471,8 +471,20 @@ class ODEEnvironment(Environment):
     def outdim(self):
         return len(self.getSensors())
 
-    def performAction(self, action):
-        """ sets the values for all actuators combined. """
+    def performAction(self, action, fast=False):
+        """Perform Action
+
+        Applies the given 'action' list of actuations to each actuator defined
+        in the system for the next time step. The next time step is then
+        calculated.
+
+        Arguments:
+            action: A list of actuations for each actuator defined.
+            fast: If True, the fast step Open Dynamics Engine algorithm will
+                be used. This method is quicker and requires less memory but
+                is less accurate. Otherwise the standard step is used.
+                (Default: False)
+        """
         pointer = 0
         for a in self.actuators:
             val = a.getNumValues()
@@ -480,7 +492,7 @@ class ODEEnvironment(Environment):
             pointer += val
 
         for _ in range(self.stepsPerAction):
-            self.step()
+            self.step(fast=fast)
 
         return
 
@@ -630,9 +642,21 @@ class ODEEnvironment(Environment):
 
         return
 
-    def step(self):
-        """ Here the ode physics is calculated by one step. """
+    def step(self, fast=False):
+        """Step
 
+        Determine all collisions and step through the environment physics
+        using the Open Dynamic Engine.
+
+        Arguments:
+            fast: Determines if a quick ODE step should be used instead of the
+                standard ODE step function. A fast step is much faster but
+                less accurate. (Default: False)
+
+        Return:
+            Integer representing the number of total steps taken from the
+                start of the simulation.
+        """
         # call additional callback functions for all kinds of tasks (e.g. printing)
         self._printfunc()
 
@@ -640,7 +664,13 @@ class ODEEnvironment(Environment):
         self.space.collide((self.world, self.contactgroup), self._near_callback)
 
         # Simulation step
-        self.world.step(float(self.dt))
+        if fast:
+            # If we are using a quick step, accuracy will decrease but speed
+            # and memory use decreases drastically
+            self.world.quickStep(float(self.dt))
+        else:
+            # Step normally
+            self.world.step(float(self.dt))
 
         # Remove all contact joints
         self.contactgroup.empty()
