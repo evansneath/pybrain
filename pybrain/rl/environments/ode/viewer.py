@@ -308,8 +308,10 @@ class ODEViewer(object):
         """
         glDisable(GL_TEXTURE_2D)
 
+        # Create a matrix for the new geometry calculations
         glPushMatrix()
 
+        # Determine which geometric object we are dealing with. Draw it
         if item['type'] in ['box', 'sphere', 'cylinder', 'ccylinder']:
             # set color of object (currently dark gray)
             if item.has_key('color'):
@@ -322,16 +324,17 @@ class ODEViewer(object):
             (x, y, z) = item['position']
             R = item['rotation']
 
+            # Create rotation matrix
             rot = [R[0], R[3], R[6], 0.0,
                    R[1], R[4], R[7], 0.0,
                    R[2], R[5], R[8], 0.0,
                       x,    y,    z, 1.0]
 
+            # Apply rotation matrix to any shape created
             glMultMatrixd(rot)
 
-            # switch different geom objects
             if item['type'] == 'box':
-                # cube
+                # Draw a cube scaled to size
                 (sx, sy, sz) = item['scale']
                 glScaled(float(sx), float(sy), float(sz))
                 glutSolidCube(1.0)
@@ -342,16 +345,30 @@ class ODEViewer(object):
                 quad = gluNewQuadric()
                 # draw cylinder and two spheres, one at each end
                 glTranslate(0.0, 0.0, -item['length']/2.0)
+
+                # Draw the cylinder object
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
+
+                # Draw the first cylinder end sphere
                 glutSolidSphere(item['radius'], 20, 20)
+
+                # Draw the second cylinder end sphere
                 glTranslate(0.0, 0.0, item['length'])
                 glutSolidSphere(item['radius'], 20, 20)
             elif item['type'] == 'cylinder':
                 glTranslate(0.0, 0.0, -item['length']/2.0)
+
+                # Draw the first cylinder end disk
                 quad = gluNewQuadric()
+                # Modify the orientation. This quad normal is inward
+                gluQuadricOrientation(quad, GLU_INSIDE)
                 gluDisk(quad, 0, item['radius'], 32, 1)
+
+                # Draw the cylinder
                 quad = gluNewQuadric()
                 gluCylinder(quad, item['radius'], item['radius'], item['length'], 32, 32)
+
+                # Draw the second cylinder end disk
                 glTranslate(0.0, 0.0, item['length'])
                 quad = gluNewQuadric()
                 gluDisk(quad, 0.0, item['radius'], 32, 1)
@@ -373,11 +390,11 @@ class ODEViewer(object):
             theta = acos(dotproduct(p, q) / (norm(p) * norm(q))) / pi * 180
 
             # rotate the plane
-            glPushMatrix()
             glTranslate(d * p[0], d * p[1], d * p[2])
             glRotate(-theta, c[0], c[1], c[2])
-            gluDisk(quad, 0, 20, 20, 1)
-            glPopMatrix()
+
+            # Create the disk with "infinite" (very large) radius
+            gluDisk(quad, 0, 200, 20, 1)
 
         glPopMatrix()
         return
