@@ -39,6 +39,7 @@ class ODEViewer(object):
         # Determine if fullscreen is active or not
         self.is_fullscreen = False
 
+        # Calculate the initial aspect ratio of the window
         self.aspect_ratio = float(self.width) / float(self.height)
         self.aspect_ratio_changed = False
 
@@ -54,32 +55,36 @@ class ODEViewer(object):
 
         self.centerObj = None
 
+        # Define the initial spherical camera positions
         self.cam_r_init = 1.0
         self.cam_theta_init = pi / 4.0
         self.cam_phi_init = 0.0
 
+        # Define the camera spherical coodrinate attributes
         self.cam_r = self.cam_r_init
         self.cam_theta = self.cam_theta_init
         self.cam_phi = self.cam_phi_init
 
+        # Define attributes to maintain frame rate
         self.fps = 60
         self.dt = 1.0 / self.fps
 
-        self.lasttime = time.time()
-        self.starttime = time.time()
+        self.last_time = time.time()
 
         self.capture_screen = False
 
+        # Define attributes to store geometries to display
         self.message = None
         self.prev_message = None
 
-        # capture only every frameT. frame
+        # Capture screen only every 'frameT'-th frame
         self.counter = 0
-        self.frameT = 1
+        self.frameT = 2
 
+        # Initialize the OpenGL viewer window
         self.init_gl()
 
-        # set OpenGL callback functions
+        # Set OpenGL callback functions
         glutKeyboardFunc(self._keyboard_callback)
         glutMouseFunc(self._mouse_callback)
         glutMotionFunc(self._motion_callback)
@@ -87,8 +92,9 @@ class ODEViewer(object):
         glutDisplayFunc(self._display_callback)
         glutIdleFunc(self._idle_callback)
 
-        # initialize udp client
+        # Initialize UDP client connection to the ODE simulation
         self.client = UDPClient(servIP, ownIP, port, buf, verbose=self.verbose)
+
         return
 
     def start(self):
@@ -477,15 +483,17 @@ class ODEViewer(object):
             #Store it for future use
             self.prev_message = self.message
 
-        # NOTE: This should be uncommented if real-time contraints are not
-        # handled in the main loop of your application
-        #t = self.dt - (time.time() - self.lasttime)
-        #if (t > 0):
-        #    time.sleep(t)
-        #self.lasttime = time.time()
-
         # Display the latest data directly after receiving
         glutPostRedisplay()
+
+        # Maintain the frame rate at the desired fps
+        t = self.dt - (time.time() - self.last_time)
+
+        if (t > 0.0):
+            time.sleep(t)
+
+        self.last_time = time.time()
+
         return
 
     def _keyboard_callback(self, key, x, y):
