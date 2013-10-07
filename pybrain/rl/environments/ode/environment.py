@@ -488,6 +488,7 @@ class ODEEnvironment(Environment):
         pointer = 0
         for a in self.actuators:
             val = a.getNumValues()
+
             a._update(action[pointer:pointer + val])
             pointer += val
 

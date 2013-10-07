@@ -1,5 +1,6 @@
 __author__ = 'Thomas Rueckstiess, ruecksti@in.tum.de'
 
+import numpy as np
 import ode
 import xode
 from pybrain.utilities import Named
@@ -188,7 +189,7 @@ class JointVelocityActuator(JointActuator):
     first connected body of each joint.
 
     Inherits:
-        Joint Actuator: The torque actuation class.
+        JointActuator: The joint torque actuation class.
     """
     def __init__(self, name='JointVelocityActuator'):
         """Initialize
@@ -223,16 +224,16 @@ class JointVelocityActuator(JointActuator):
                 pass
             elif type(joint) == ode.AMotor:
                 num_axes = joint.getNumAxes()
-                velocities = []
+                joint_velocities = []
 
                 for axis in range(num_axes):
-                    velocities.append(action[0])
+                    joint_velocities.append(action[0])
                     action = action[1:]
 
                 for _ in range(3 - num_axes):
-                    velocities.append(0.0)
+                    joint_velocities.append(0.0)
 
-                (v1, v2, v3) = velocities
+                (v1, v2, v3) = joint_velocities
 
                 joint.setParam(ode.ParamVel, v1)
                 joint.setParam(ode.ParamVel2, v2)
@@ -265,6 +266,8 @@ class SpecificJointActuator(JointActuator):
         self._names = jointNames
         self._joints = []
 
+        return
+
     def _parseJoints(self, node=None):
         for name in self._names:
             try:
@@ -273,6 +276,8 @@ class SpecificJointActuator(JointActuator):
                 # the given object name is not found. output warning and quit.
                 warnings.warn("Joint with name '%s' not found." % (name))
                 sys.exit()
+
+        return
 
     def _connect(self, world):
         Actuator._connect(self, world)
@@ -284,6 +289,8 @@ class SpecificJointActuator(JointActuator):
         # do initial update to get numValues
         self._numValues = self._countValues()
 
+        return
+
 
 class CopyJointActuator(JointActuator):
     ''' This sensor takes a list of joint names and controls all joints at once (one single value,
@@ -293,6 +300,8 @@ class CopyJointActuator(JointActuator):
         Actuator.__init__(self, name, 0)
         self._names = jointNames
         self._joints = []
+        
+        return
 
     def _parseJoints(self, node=None):
         for name in self._names:
@@ -302,6 +311,8 @@ class CopyJointActuator(JointActuator):
                 # the given object name is not found. output warning and quit.
                 warnings.warn("Joint with name '%s' not found." % (name))
                 sys.exit()
+               
+        return
 
     def _connect(self, world):
         Actuator._connect(self, world)
@@ -312,6 +323,8 @@ class CopyJointActuator(JointActuator):
 
         # pretend to have only one single value
         self._numValues = 1
+
+        return
 
     def _update(self, action):
         assert (len(action) == self._numValues)
@@ -343,6 +356,8 @@ class CopyJointActuator(JointActuator):
                 # therefore, you can (must) set a torque but it is not applied
                 # to the joint.
                 pass
+
+        return
 
 
 if __name__ == '__main__':
