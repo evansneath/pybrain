@@ -24,7 +24,8 @@ class XODEfile(XMLstruct):
 
         self._xodename = name
         self._centerOn = None
-        self._affixToEnvironment = None
+
+        self._affixToEnvironment = []
 
         # sensors is a list of ['type', [args], {kwargs}]
         self.sensors = []
@@ -38,6 +39,9 @@ class XODEfile(XMLstruct):
 
         # A list of objects which are not affected by the world gravity
         self._no_gravity = []
+
+        # A list of objects which are not displayed in OpenGL (invisible)
+        self._no_display = []
 
         # list of tuples ('name', (r, g, b))
         self._colors = []
@@ -81,7 +85,7 @@ class XODEfile(XMLstruct):
         return
             
     def insertBody(self, bname, shape, size, density, pos=[0, 0, 0],
-            passSet=None, euler=None, mass=None, color=None, has_gravity=True):
+            passSet=None, euler=None, mass=None, color=None, has_gravity=True, invisible=False):
         """Inserts a body with the given custom name and one of the standard
         shapes. The size and pos parameters are given as xyz-lists or tuples.
         euler are three rotation angles (degrees), 
@@ -136,6 +140,8 @@ class XODEfile(XMLstruct):
         if not has_gravity:
             self._no_gravity.append(bname)
 
+        if invisible:
+            self._no_display.append(bname)
         return
 
     def insertJoint(self, body1, body2, type, axis=None, anchor=(0, 0, 0), rel=False, name=None):
@@ -257,7 +263,7 @@ class XODEfile(XMLstruct):
         self._centerOn = name
 
     def affixToEnvironment(self, name):
-        self._affixToEnvironment = name
+        self._affixToEnvironment.append(name)
         return
 
     def getPassList(self):
@@ -288,13 +294,19 @@ class XODEfile(XMLstruct):
             for body in self._no_gravity:
                 f.write(body + '\n')
 
+        if self._no_display:
+            f.write('<invisible>\n')
+            for body in self._no_display:
+                f.write(body + '\n')
+
         if self._centerOn is not None:
             f.write('<centerOn>\n')
             f.write(self._centerOn + '\n')
 
-        if self._affixToEnvironment is not None:
+        if self._affixToEnvironment:
             f.write('<affixToEnvironment>\n')
-            f.write(self._affixToEnvironment + '\n')
+            for body in self._affixToEnvironment:
+                f.write(body + '\n')
 
         if self._nSensorElements > 0:
             f.write('<sensors>\n')

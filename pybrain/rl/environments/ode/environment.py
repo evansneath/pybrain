@@ -89,6 +89,9 @@ class ODEEnvironment(Environment):
         # Determine world gravity based on the initialization argument
         self.g = gravity
 
+        # Maintain a list of bodies that should not be sent to the OpenGL viewer
+        self.invisible_bodies = []
+
         # Store all geometries/bodies sent to the OpenGL renderer to determine
         # if they have been modified or not
         self.prev_message = {}
@@ -308,6 +311,20 @@ class ODEEnvironment(Environment):
                 obj.setGravityMode(False)
             else:
                 print ('ERROR: noGravity configuration is only valid for' +
+                       'ODE Body class objects')
+
+        # <invisible>
+        for obj_name in self.config.getValue('invisible'):
+            try:
+                obj = self.root.namedChild(obj_name).getODEObject()
+            except IndexError:
+                print 'ERROR: Could not find object \'%s\'' % (obj_name)
+                sys.exit(1)
+
+            if isinstance(obj, ode.Body):
+                self.invisible_bodies.append(obj_name)
+            else:
+                print ('ERROR: invisible configuration is only valid for' +
                        'ODE Body class objects')
 
         # <centerOn>
@@ -565,6 +582,10 @@ class ODEEnvironment(Environment):
 
             if body != None:
                 item_name = body.name
+
+                if item_name in self.invisible_bodies:
+                    continue
+
                 item_pos = body.getPosition()
                 item_rot = body.getRotation()
 
