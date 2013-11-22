@@ -138,4 +138,3 @@ class EvolinoTrainer(Trainer):
 
     def burstMutate(self):
         self.burstMutation.apply(self._population)
-

@@ -11,9 +11,6 @@ from scipy.linalg import pinv2
 from copy import deepcopy
 
 
-
-
-
 class EvolinoEvaluation(Filter):
     """ Evaluate all individuals of the Evolino population, and store their
         fitness value inside the population.
@@ -39,6 +36,7 @@ class EvolinoEvaluation(Filter):
         self.dataset = dataset
         self.max_fitness = -Infinity
 
+        return
 
     def _evaluateNet(self, net, dataset, wtRatio):
         """ Evaluates the performance of net on the given dataset.
@@ -48,51 +46,62 @@ class EvolinoEvaluation(Filter):
             :key dataset: Sequences to test the net on
             :key wtRatio: See __init__
         """
-
         # === extract sequences from dataset ===
         numSequences = dataset.getNumSequences()
-        washout_sequences = []
-        training_sequences = []
-        for i in xrange(numSequences):
-            sequence = dataset.getSequence(i)[1]
-            training_start = int(wtRatio * len(sequence))
-            washout_sequences.append(sequence[                  : training_start   ])
-            training_sequences.append(sequence[ training_start   :                  ])
 
+        washout_input_sequences = []
+        washout_output_sequences = []
+        training_input_sequences = []
+        training_output_sequences = []
+
+        for i in xrange(numSequences):
+            sequence = dataset.getSequence(i)
+
+            input_sequence = sequence[0].copy()
+            output_sequence = sequence[1].copy()
+
+            training_start = int(wtRatio * len(input_sequence))
+
+            washout_input_sequences.append(input_sequence[:training_start])
+            washout_output_sequences.append(output_sequence[:training_start])
+
+            training_input_sequences.append(input_sequence[training_start:])
+            training_output_sequences.append(output_sequence[training_start:])
 
         # === collect raw output (denoted by phi) ===
         phis = []
+
         for i in range(numSequences):
             net.reset()
-            net.washout(washout_sequences[i])
-            phi = net.washout(training_sequences[i])
+            net.washout(washout_input_sequences[i], washout_output_sequences[i])
+            phi = net.washout(training_input_sequences[i], training_output_sequences[i])
             phis.append(phi)
 
-
         # === calculate and set weights of linear output layer ===
-        PHI = concatenate(phis).T
-        PHI_INV = pinv2(PHI)
-        TARGET = concatenate(training_sequences).T
-        W = dot(TARGET, PHI_INV)
-        net.setOutputWeightMatrix(W)
-
+        phi = concatenate(phis).T
+        phi_inv = pinv2(phi)
+        target = concatenate(training_output_sequences).T
+        weight_matrix = dot(target, phi_inv)
+        net.setOutputWeightMatrix(weight_matrix)
 
         # === collect outputs by applying the newly configured network ===
         outputs = []
-        for i in range(numSequences):
-            out = net.extrapolate(washout_sequences[i], len(training_sequences[i]))
-            outputs.append(out)
 
+        for i in range(numSequences):
+            output = net.extrapolate(
+                concatenate((washout_input_sequences[i], training_input_sequences[i])),
+                washout_output_sequences[i],
+                len(training_output_sequences[i])
+            )
+
+            outputs.append(output)
 
         # === calculate fitness value ===
-        OUTPUT = concatenate(outputs)
-        TARGET = concatenate(training_sequences)
-        fitness = self.evalfunc(OUTPUT, TARGET)
-
+        all_outputs = concatenate(outputs)
+        all_targets = concatenate(training_output_sequences)
+        fitness = self.evalfunc(all_outputs, all_targets)
 
         return fitness
-
-
 
     def apply(self, population):
         """ Evaluate each individual, and store fitness inside population.
@@ -105,7 +114,6 @@ class EvolinoEvaluation(Filter):
         population.clearFitness()
         best_W = None
         best_fitness = -Infinity
-
 
         # iterate all individuals. Note, that these individuals are created on the fly
         for individual in population.getIndividuals():
@@ -128,12 +136,10 @@ class EvolinoEvaluation(Filter):
         net.setGenome(best_genome)
         net.setOutputWeightMatrix(best_W)
 
-
         # store fitness maximum to use it for triggering burst mutation
         self.max_fitness = best_fitness
 
-
-
+        return
 
 
 class EvolinoSelection(Filter):
@@ -148,6 +154,8 @@ class EvolinoSelection(Filter):
         self.nParents = None
         self.sub_selection = EvolinoSubSelection()
 
+        return
+
     def apply(self, population):
         """ The subpopulations of the EvolinoPopulation are iterated and forwarded
             to the EvolinoSubSelection() operator.
@@ -158,7 +166,7 @@ class EvolinoSelection(Filter):
         for sp in population.getSubPopulations():
             self.sub_selection.apply(sp)
 
-
+        return
 
 
 class EvolinoReproduction(Filter):
@@ -168,7 +176,8 @@ class EvolinoReproduction(Filter):
         """
         Filter.__init__(self)
         self._kwargs = kwargs
-
+        
+        return
 
     def apply(self, population):
         """ The subpopulations of the EvolinoPopulation are iterated and forwarded
@@ -181,6 +190,8 @@ class EvolinoReproduction(Filter):
         for sp in sps:
             reproduction.apply(sp)
 
+        return
+
 
 class EvolinoBurstMutation(Filter):
     """ The burst mutation operator for evolino """
@@ -189,6 +200,8 @@ class EvolinoBurstMutation(Filter):
         """
         Filter.__init__(self)
         self._kwargs = kwargs
+
+        return
 
     def apply(self, population):
         """ Keeps just the best fitting individual of each subpopulation.
@@ -203,18 +216,18 @@ class EvolinoBurstMutation(Filter):
             reproduction = EvolinoSubReproduction(**self._kwargs)
             reproduction.apply(sp)
 
+        return
 
 
 # ==================================================== SubPopulation related ===
-
-
-
 class EvolinoSubSelection(Filter):
     """ Selection operator for EvolinoSubPopulation objects
         Specify its nParents attribute at any time. See EvolinoSelection.
     """
     def __init__(self):
         Filter.__init__(self)
+
+        return
 
     def apply(self, population):
         """ Simply removes some individuals with lowest fitness values
@@ -231,8 +244,7 @@ class EvolinoSubSelection(Filter):
 
         population.removeWorstIndividuals(n - nKeep)
 
-
-
+        return
 
 
 class EvolinoSubReproduction(Filter):
@@ -253,8 +265,7 @@ class EvolinoSubReproduction(Filter):
         if self.mutationVariate is not None:
             self.mutation.mutationVariate = self.mutationVariate
 
-
-
+        return
 
     def apply(self, population):
         """ First determines the number of individuals to be created.
@@ -267,6 +278,7 @@ class EvolinoSubReproduction(Filter):
 
         best = population.getBestIndividualsSorted(freespace)
         children = set()
+
         while True:
             if len(children) >= freespace: break
             for parent in best:
@@ -280,8 +292,7 @@ class EvolinoSubReproduction(Filter):
 
         assert population.getMaxNIndividuals() == population.getIndividualsN()
 
-
-
+        return
 
 
 class EvolinoSubMutation(SimpleMutation):
@@ -295,6 +306,4 @@ class EvolinoSubMutation(SimpleMutation):
         ap.add('mutationVariate', default=CauchyVariate())
         self.mutationVariate.alpha = 0.001
 
-
-
-
+        return
