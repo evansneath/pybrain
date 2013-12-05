@@ -2,7 +2,7 @@ __author__ = 'Michael Isik'
 
 
 from numpy.random import permutation
-from numpy import array, array_split, apply_along_axis, concatenate, ones, dot, delete, append, zeros, argmax
+from numpy import array, array_split, apply_along_axis, concatenate, ones, dot, delete, append, zeros, argmax, sqrt
 import copy
 from pybrain.datasets.importance import ImportanceDataSet
 from pybrain.datasets.sequential import SequentialDataSet
@@ -58,9 +58,6 @@ class Validator(object):
         output = array(output)
         target = array(target)
         assert output.shape == target.shape
-        if importance is not None:
-            assert importance.shape == target.shape
-            importance = importance.flatten()
 
         # flatten structures
         output = output.flatten()
@@ -68,15 +65,22 @@ class Validator(object):
 
         if importance is None:
             importance = ones(len(output))
-
+        else:
+            assert importance.shape == target.shape
+            importance = importance.flatten()
 
         # calculate mse
         squared_error = (output - target) ** 2
         mse = dot(squared_error, importance) / sum(importance)
 
-
         return mse
 
+    @classmethod
+    def RMSE(cls, output, target, importance=None):
+        mse = cls.MSE(output, target, importance)
+        rmse = sqrt(mse)
+
+        return rmse
 
 
 class ClassificationHelper(object):

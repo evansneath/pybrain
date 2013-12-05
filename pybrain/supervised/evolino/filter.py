@@ -29,7 +29,7 @@ class EvolinoEvaluation(Filter):
         ap = KWArgsProcessor(self, kwargs)
 
         ap.add('verbosity', default=0)
-        ap.add('evalfunc', default=lambda output, target:-Validator.MSE(output, target))
+        ap.add('evalfunc', default=lambda output, target:-Validator.RMSE(output, target))
         ap.add('wtRatio', default=array([1, 2], float))
 
         self.network = evolino_network

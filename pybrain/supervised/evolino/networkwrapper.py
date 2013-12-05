@@ -36,7 +36,7 @@ class EvolinoNetwork(Module):
         self._network.sortModules()
 
         self.offset = self._network.offset
-        self.backprojectionFactor = 0.01
+        self.backprojectionFactor = 1.0#0.01
 
         return
 
