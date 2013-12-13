@@ -2,12 +2,11 @@ __author__ = 'Michael Isik'
 
 
 from numpy.random import permutation
-from numpy import array, array_split, apply_along_axis, concatenate, ones, dot, delete, append, zeros, argmax, sqrt
+from numpy import array, array_split, apply_along_axis, concatenate, ones_like, dot, delete, append, zeros, argmax, sqrt
 import copy
 from pybrain.datasets.importance import ImportanceDataSet
 from pybrain.datasets.sequential import SequentialDataSet
 from pybrain.datasets.supervised import SupervisedDataSet
-
 
 
 class Validator(object):
@@ -59,15 +58,15 @@ class Validator(object):
         target = array(target)
         assert output.shape == target.shape
 
+        if importance is None:
+            importance = ones_like(output)
+        else:
+            assert importance.shape == target.shape
+
         # flatten structures
         output = output.flatten()
         target = target.flatten()
-
-        if importance is None:
-            importance = ones(len(output))
-        else:
-            assert importance.shape == target.shape
-            importance = importance.flatten()
+        importance = importance.flatten()
 
         # calculate mse
         squared_error = (output - target) ** 2
@@ -77,8 +76,7 @@ class Validator(object):
 
     @classmethod
     def RMSE(cls, output, target, importance=None):
-        mse = cls.MSE(output, target, importance)
-        rmse = sqrt(mse)
+        rmse = sqrt(cls.MSE(output, target, importance))
 
         return rmse
 
@@ -100,9 +98,6 @@ class ClassificationHelper(object):
                          component with the maximum value.
         """
         return apply_along_axis(argmax, 1, data)
-
-
-
 
 
 class SequenceHelper(object):
@@ -145,9 +140,6 @@ class SequenceHelper(object):
         return importance
 
 
-
-
-
 class ModuleValidator(object):
     """ This class provides methods for the validation of calculated output
         values compared to their destined target values. It especially handles
@@ -184,7 +176,6 @@ class ModuleValidator(object):
             module,
             dataset)
 
-
     @classmethod
     def validate(cls, valfunc, module, dataset):
         """ Abstract validate function, that is heavily used by this class.
@@ -207,7 +198,6 @@ class ModuleValidator(object):
         else:
             return valfunc(output, target)
 
-
     @classmethod
     def _calculateModuleOutputSequential(cls, module, dataset):
         """ Calculates the module's output on the dataset. Especially designed
@@ -225,7 +215,6 @@ class ModuleValidator(object):
         outputs = array(outputs)
         return outputs
 
-
     @classmethod
     def calculateModuleOutput(cls, module, dataset):
         """ Calculates the module's output on the dataset. Can be called with
@@ -240,9 +229,6 @@ class ModuleValidator(object):
             input = dataset.getField('input')
             output = array([module.activate(inp) for inp in input])
             return output
-
-
-
 
 
 class CrossValidator(object):
@@ -327,35 +313,34 @@ class CrossValidator(object):
                 trainer.trainEpochs(self._max_epochs)
 
             # test
-            #print "testing iteration", i
+            # print "testing iteration", i
             test_ds = SupervisedDataSet(indim, outdim)
             test_ds.setField("input"  , inp[test_idxs])
             test_ds.setField("target" , tar[test_idxs])
-#            perf += self.getPerformance( trainer.module, dataset )
+            # perf += self.getPerformance( trainer.module, dataset )
             perf += self._calculatePerformance(trainer.module, dataset)
 
         perf /= n_folds
         return perf
 
-#    def getPerformance( self, module, dataset ):
-#        inp    = dataset.getField("input")
-#        tar    = dataset.getField("target")
-#        indim  = module.indim
-#        outdim = module.outdim
+    #def getPerformance( self, module, dataset ):
+    #    inp    = dataset.getField("input")
+    #    tar    = dataset.getField("target")
+    #    indim  = module.indim
+    #    outdim = module.outdim
 
-#        def forward(inp):
-#            out = empty(outdim)
-#            module._forwardImplementation(inp,out)
-#            return out
+    #    def forward(inp):
+    #        out = empty(outdim)
+    #        module._forwardImplementation(inp,out)
+    #        return out
 
-#        out = apply_along_axis(forward,1,inp)
-#        return self._calculatePerformance(out,tar)
-#        return self._calculatePerformance(module, dataset)
+    #    out = apply_along_axis(forward,1,inp)
+    #    return self._calculatePerformance(out,tar)
+    #    return self._calculatePerformance(module, dataset)
 
 
     def _calculatePerformance(self, output, target):
         raise NotImplementedError()
-
 
 
 def testOnSequenceData(module, dataset):
@@ -377,7 +362,7 @@ def testOnSequenceData(module, dataset):
     for j in xrange(len(output)):
         # sum up the output values of one sequence
         summed_output += output[j]
-#            print j, output[j], " --> ", summed_output
+        #print j, output[j], " --> ", summed_output
         # if we reached the end of the sequence
         if j in ends:
             # convert summed_output and target to class labels
@@ -392,11 +377,7 @@ def testOnSequenceData(module, dataset):
 
     class_output = array(class_output)
     class_target = array(class_target)
-#    print class_target
-#    print class_output
+    #print class_target
+    #print class_output
+
     return Validator.classificationPerformance(class_output, class_target)
-
-
-
-
-

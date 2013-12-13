@@ -15,10 +15,10 @@ class EvolinoEvaluation(Filter):
     """ Evaluate all individuals of the Evolino population, and store their
         fitness value inside the population.
     """
-
     def __init__(self, evolino_network, dataset, **kwargs):
         """ :key evolino_network: an instance of NetworkWrapper()
             :key dataset: The evaluation dataset
+            :key importance: Determine the importance of each epoch of each dataset
             :key evalfunc: Compares output to target values and returns a scalar, denoting the fitness.
                              Defaults to -mse(output, target).
             :key wtRatio: Float array of two values denoting the ratio between washout and training length.
@@ -29,8 +29,9 @@ class EvolinoEvaluation(Filter):
         ap = KWArgsProcessor(self, kwargs)
 
         ap.add('verbosity', default=0)
-        ap.add('evalfunc', default=lambda output, target:-Validator.RMSE(output, target))
+        ap.add('evalfunc', default=lambda output, target, importance=None:-Validator.MSE(output, target, importance))
         ap.add('wtRatio', default=array([1, 2], float))
+        ap.add('importance', default=None)
 
         self.network = evolino_network
         self.dataset = dataset
@@ -99,7 +100,7 @@ class EvolinoEvaluation(Filter):
         # === calculate fitness value ===
         all_outputs = concatenate(outputs)
         all_targets = concatenate(training_output_sequences)
-        fitness = self.evalfunc(all_outputs, all_targets)
+        fitness = self.evalfunc(all_outputs, all_targets, self.importance)
 
         return fitness
 

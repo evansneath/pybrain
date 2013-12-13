@@ -28,7 +28,7 @@ class EvolinoTrainer(Trainer):
     mutationVariate = property(lambda self: self._mutationVariate)
     wtRatio = property(lambda self: self._wtRatio)
     weightInitializer = property(lambda self: self._weightInitializer)
-#    burstMutation        = property(lambda self: self._burstMutation)
+    # burstMutation = property(lambda self: self._burstMutation)
     backprojectionFactor = property(lambda self: self._backprojectionFactor)
 
     def __init__(self, evolino_network, dataset, **kwargs):
@@ -124,7 +124,6 @@ class EvolinoTrainer(Trainer):
             if self.verbosity: print "RUNNING BURST MUTATION"
             self.burstMutate()
             self._max_fitness_epoch = self.totalepochs
-
 
         for filter in self._filters:
             filter.apply(self._population)
