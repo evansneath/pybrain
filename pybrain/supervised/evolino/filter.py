@@ -61,7 +61,9 @@ class EvolinoEvaluation(Filter):
             input_sequence = sequence[0].copy()
             output_sequence = sequence[1].copy()
 
-            training_start = int(wtRatio * len(input_sequence))
+            # NOTE: EXPERIMENTAL
+            training_start = 1
+            #training_start = int(wtRatio * len(input_sequence))
 
             washout_input_sequences.append(input_sequence[:training_start])
             washout_output_sequences.append(output_sequence[:training_start])

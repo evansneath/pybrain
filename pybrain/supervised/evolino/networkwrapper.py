@@ -36,7 +36,7 @@ class EvolinoNetwork(Module):
         self._network.sortModules()
 
         self.offset = self._network.offset
-        self.backprojectionFactor = 1.0#0.01
+        self.backprojectionFactor = 1.0
 
         return
 
@@ -77,6 +77,7 @@ class EvolinoNetwork(Module):
         """
         testing_idx = len(targets)
         self.reset()
+
         self.washout(inputs[:testing_idx], targets)
         outputs = self.generate(inputs[testing_idx:], length)
 
@@ -94,6 +95,7 @@ class EvolinoNetwork(Module):
     def _activateNetwork(self, input):
         assert len(input) == self._network.indim
         output = self._network.activate(input)
+
         self.offset = self._network.offset
 
         return output
@@ -169,10 +171,12 @@ class EvolinoNetwork(Module):
         if self.offset == 0:
             return np.zeros(self.outdim)
 
-        return self._out_layer.outputbuffer[self.offset - 1]
+        #return self._out_layer.outputbuffer[self.offset - 1]
+        return self._network.outputbuffer[self.offset - 1]
 
     def _setLastOutput(self, output):
-        self._out_layer.outputbuffer[self.offset - 1][:] = output
+        #self._out_layer.outputbuffer[self.offset - 1][:] = output
+        self._network.outputbuffer[self.offset - 1][:] = output
 
         return
 
